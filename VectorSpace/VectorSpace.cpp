@@ -9,12 +9,13 @@
 #include "Shapes.h"
 #include "BSLA.h"
 
-#define WINLENGTH 850
-#define WINHEIGHT 600
-
 static SDL_Window* window = NULL;
 static SDL_Renderer* renderer = NULL;
 static SDL_Texture* letterTexture = NULL;
+
+static double WINSCALE;
+static int WINLENGTH = 1050;
+static int WINHEIGHT = 800;
 
 const bool* key_board_state = SDL_GetKeyboardState(NULL);
 
@@ -32,6 +33,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
         return SDL_APP_FAILURE;
     }
     SDL_SetRenderScale(renderer, WINLENGTH / WINLENGTH, WINLENGTH / WINLENGTH);
+    SDL_SetWindowResizable(window, true);
+    WINSCALE = (double)WINLENGTH / 1050.0;
 
     SDL_Surface* textBMPSurf = SDL_LoadBMP("Resources/font.bmp");
     letterTexture = SDL_CreateTextureFromSurface(renderer, textBMPSurf);
@@ -45,7 +48,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->player = new PlayerShip();
     gameState->player->location = Vector2D(WINLENGTH/2, 100);
     gameState->staticGravBodies.push_back(new StaticGravBody(Vector2D(0, WINHEIGHT / 2), 200, 10000));
-    gameState->dynamicGravBodies.push_back(new DynamicGravBody(Vector2D(WINLENGTH/2, WINHEIGHT / 2), 50, 1000, tayloyDCos, taylorDSin, -3.1415, 3.1415, 0.2, 100, 100));
+    //DynamicGravBody* dbod = new DynamicGravBody(Vector2D(WINLENGTH / 2, WINHEIGHT / 2), 50, 1000, 2, -3.1415, 3.1415, 0.2, 100, 100);
+    //dbod->functionX = tayloyDCos; dbod->functionY = taylorDSin;
+    DynamicGravBody* dbod = new DynamicGravBody(Vector2D(WINLENGTH / 2, WINHEIGHT / 2), 50, 1000, 1, -3.1415, 3.1415, 0.2, 500, 500);
+    dbod->orbitPoint = Vector2D(0, WINHEIGHT / 2);
+    gameState->dynamicGravBodies.push_back(dbod);
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
 
@@ -79,6 +86,11 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     if (event->key.key == SDLK_ESCAPE ||
         event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;  /* end the program, reporting success to the OS. */
+    }
+    if (event->type == SDL_EVENT_WINDOW_RESIZED) {
+        SDL_GetWindowSize(window, &WINLENGTH, &WINHEIGHT);
+        WINSCALE = (double) WINLENGTH / 1050.0;
+        std::cout << WINSCALE << "\n";
     }
 
     Vector2D moveVect(0, 0);
@@ -156,6 +168,7 @@ bool render(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
 
     double pxoffset = gameState->player->location.x - WINLENGTH / 2;
     double pyoffset = gameState->player->location.y - WINHEIGHT / 2;
@@ -193,7 +206,7 @@ bool render(GameState* gameState) {
 }
 
 void renderText(std::string text, int x, int y, int kerning, int colorHex, double scale) {
-    SDL_SetRenderScale(renderer, scale, scale);
+    SDL_SetRenderScale(renderer, WINSCALE * scale, WINSCALE * scale);
     SDL_FRect rect;
     SDL_FRect selectRect;
     rect.x = x; rect.y = y;
@@ -224,5 +237,5 @@ void renderText(std::string text, int x, int y, int kerning, int colorHex, doubl
     if (!SDL_SetTextureColorMod(letterTexture, 255, 255, 255)) {
         std::cout << "reset color failure\n";
     }
-    SDL_SetRenderScale(renderer, WINLENGTH / WINLENGTH, WINLENGTH / WINLENGTH);
+    SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
 }

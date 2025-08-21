@@ -46,41 +46,68 @@ public:
 	double timeCur = timetart;
 	float deltaMul = 1; float XMul = 1; float YMul = 1;
 
+	// 0 for using the set speed, 1 for rigid eliptical orbit about a point, 2 for a following the function vectors
+	char moveType = 0; 
+
+	Vector2D orbitPoint = Vector2D(0, 0); // XMul and YMul are used for the 
+
 	// These follow a c0 + c1*x + c2*x^2 + ... + c3*x^i format where c is the value at the index of the vector
 	// good for taylor series
 	std::vector<double> functionX;
 	std::vector<double> functionY;
 
-	DynamicGravBody(Vector2D loc, double r, double m, std::vector<double> funX, std::vector<double> funY) {
-		location = loc; radius = r; mass = m;
-		functionX = funX; functionY = funY;
+	DynamicGravBody(Vector2D loc, double r, double m, char movet) {
+		location = loc; radius = r; mass = m; moveType = movet;
 	}
-	DynamicGravBody(Vector2D loc, double r, double m, std::vector<double> funX, std::vector<double> funY, double tstart, double tend, float dm, float xm, float ym) {
-		location = loc; radius = r; mass = m;
-		functionX = funX; functionY = funY;
+	DynamicGravBody(Vector2D loc, double r, double m, char movet, double tstart, double tend, float dm, float xm, float ym) {
+		location = loc; radius = r; mass = m; moveType = movet;
 		timetart = tstart; timeEnd = tend; deltaMul = dm; XMul = xm; YMul = ym;
 	}
 	void update(GameState* state) {
-		int index = 0; double xComp = 0; double yComp = 0;
-		for (double elem : functionX) {
-			xComp += pow(timeCur, index) * elem;
-			index++;
-		}
-		index = 0;
-		for (double elem : functionY) {
-			yComp += pow(timeCur, index) * elem;
-			index++;
-		}
-
-		speed.x = xComp * XMul; speed.y = yComp * YMul;
-
 		timeCur += state->deltaT * deltaMul;
 		if (timeCur > timeEnd) {
 			timeCur = timetart;
 		}
 
-		location = location + (speed * state->deltaT);
+		// moveType dictates how speed is changed
+		switch (moveType)
+		{
+		case 0: 
+			// Based on whatever the speed already is
+			break;
+		case 1: 
+		{
+			// rigid eliptical orbit about orbitPoint
+			// calculate where we want to be then figure out speed
+			Vector2D pastLocation = location;
+			Vector2D newLocation = Vector2D(cos(timeCur) * XMul, sin(timeCur) * YMul);
+			newLocation = newLocation + orbitPoint;
 
+			// Speed is not calculated based on where we want to be
+			speed = newLocation - pastLocation;
+		}
+		break;
+		case 2:
+		{
+			// use function vectors
+			int index = 0; double xComp = 0; double yComp = 0;
+			for (double elem : functionX) {
+				xComp += pow(timeCur, index) * elem;
+				index++;
+			}
+			index = 0;
+			for (double elem : functionY) {
+				yComp += pow(timeCur, index) * elem;
+				index++;
+			}
+			speed.x = xComp * XMul; speed.y = yComp * YMul;
+		}
+		break;
+		default:
+		break;
+		}
+
+		location = location + (speed * state->deltaT);
 		// Wrap around
 		if (location.x < -2000) {
 			location.x = 2000;
