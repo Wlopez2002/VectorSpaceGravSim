@@ -47,12 +47,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     GameState* gameState = new GameState;
     gameState->player = new PlayerShip();
     gameState->player->location = Vector2D(WINLENGTH/2, 100);
-    gameState->staticGravBodies.push_back(new StaticGravBody(Vector2D(0, WINHEIGHT / 2), 200, 10000));
-    //DynamicGravBody* dbod = new DynamicGravBody(Vector2D(WINLENGTH / 2, WINHEIGHT / 2), 50, 1000, 2, -3.1415, 3.1415, 0.2, 100, 100);
-    //dbod->functionX = tayloyDCos; dbod->functionY = taylorDSin;
-    DynamicGravBody* dbod = new DynamicGravBody(Vector2D(WINLENGTH / 2, WINHEIGHT / 2), 50, 1000, 1, -3.1415, 3.1415, 0.2, 500, 500);
-    dbod->orbitPoint = Vector2D(0, WINHEIGHT / 2);
-    gameState->dynamicGravBodies.push_back(dbod);
+
+    StaticGravBody* sbod = new StaticGravBody(Vector2D(0, WINHEIGHT / 2), 200, 10000);
+    sbod->bodyID = 1;
+    gameState->staticGravBodies.push_back(sbod);
+    //DynamicGravBody* gravBod = new DynamicGravBody(Vector2D(0, 0), 25, 100, 3);
+    //gravBod->bodyID = 4; gravBod->speed = getOrbitSpeed(sbod, gravBod->location);
+    //gameState->dynamicGravBodies.push_back(gravBod);
+    randBodyOrbiting(sbod,200, 2323, gameState, 25, 0);
+
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
 
@@ -94,18 +97,25 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     }
 
     Vector2D moveVect(0, 0);
-    //gameState->player->deltaSpeed(Vector2D(0, 0));
+    double pMoveSpeed = gameState->player->moveSpeed;
+
+    if (key_board_state[SDL_SCANCODE_Q]) {
+        gameState->player->moveSpeed -= 4 * gameState->deltaT;
+    }
+    if (key_board_state[SDL_SCANCODE_E]) {
+        gameState->player->moveSpeed += 4 * gameState->deltaT;
+    }
     if (key_board_state[SDL_SCANCODE_W]) {
-        moveVect = moveVect + Vector2D(0, -1);
+        moveVect = moveVect + Vector2D(0, -pMoveSpeed);
     }
     if (key_board_state[SDL_SCANCODE_S]) {
-        moveVect = moveVect + Vector2D(0, 1);
+        moveVect = moveVect + Vector2D(0, pMoveSpeed);
     }
     if (key_board_state[SDL_SCANCODE_A]) {
-        moveVect = moveVect + Vector2D(-1, 0);
+        moveVect = moveVect + Vector2D(-pMoveSpeed, 0);
     }
     if (key_board_state[SDL_SCANCODE_D]) {
-        moveVect = moveVect + Vector2D(1, 0);
+        moveVect = moveVect + Vector2D(pMoveSpeed, 0);
     }
     if (moveVect.x == 0 and moveVect.y == 0) {
         gameState->player->moving = false;
@@ -114,6 +124,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     else {
         gameState->player->moving = true;
     }
+
     gameState->player->deltaSpeed(moveVect);
 
     if (event->type == SDL_EVENT_KEY_DOWN) {
@@ -182,22 +193,22 @@ bool render(GameState* gameState) {
         DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
     }
 
-    renderText(gameState->player->location.toString(), 10, 0, 24, 0x00FFFF, 0.5);
-    renderText(gameState->player->speed.toString(), 10, 30, 24, 0x00FFFF, 0.5);
-    renderText(gameState->player->gravDelta.toString(), 10, 70, 24, 0x00FFFF, 0.5);
-    renderText(gameState->player->playerDelta.toString(), 10, 100, 24, 0x00FFFF, 0.5);
+    renderText("Player Location" + gameState->player->location.toString(), 10, 5, 24, 0x00FFFF, 0.5);
+    renderText("Player Speed   " + gameState->player->speed.toString(), 10, 40, 24, 0x00FFFF, 0.5);
+    renderText("Gravity Vector " + gameState->player->gravDelta.toString(), 10, 80, 24, 0x00FFFF, 0.5);
+    renderText("Movement Vector" + gameState->player->playerDelta.toString(), 10, 120, 24, 0x00FFFF, 0.5);
+    renderText("Movement Thrust " + std::to_string(gameState->player->moveSpeed), 10, 160, 24, 0x00FFFF, 0.5);
     if (gameState->player->parked) {
-        renderText("parked = true", 10, 130, 24, 0x00FFFF, 0.5);
-        renderText(gameState->player->parkedOn->speed.toString(), 10, 170, 24, 0x00FFFF, 0.5);
+        renderText("parked = true", 1000, 5, 24, 0x00FFFF, 0.5);
     }
     else {
-        renderText("parked = false", 10, 130, 24, 0x00FFFF, 0.5);
+        renderText("parked = false", 1000, 5, 24, 0x00FFFF, 0.5);
     }
     if (gameState->player->moving) {
-        renderText("moving = true", 370, 130, 24, 0x00FFFF, 0.5);
+        renderText("moving = true", 1000, 40, 24, 0x00FFFF, 0.5);
     }
     else {
-        renderText("moving = false", 370, 130, 24, 0x00FFFF, 0.5);
+        renderText("moving = false", 1000, 40, 24, 0x00FFFF, 0.5);
     }
     
 

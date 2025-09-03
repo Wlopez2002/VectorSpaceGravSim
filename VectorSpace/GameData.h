@@ -11,10 +11,15 @@ class DynamicGravBody;
 class StaticGravBody;
 class PlayerShip;
 
+static const double GCONST = 2.0;
+
 double calcGravity(double mass, double distance);
+Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation);
 Vector2D doGravity(GameState* state, Vector2D location);
 Body* willCollide(GameState* state, Vector2D location);
 Body* closestToPoint(GameState* state, Vector2D location);
+void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius);
+void randBodyOrbiting(Body* toOrbit, int distance, int seed, GameState* state, double radius, int moons);
 
 // taylor series approx of Sin and Cos derivative
 static std::vector<double> taylorDSin = { 1.0, 0, -1.0 / 2, 0, 1.0 / 24, 0, -1.0 / 720, 0, 1.0 / 40320, 0, -1.0 / 3628800 };
@@ -33,6 +38,7 @@ public:
 	Vector2D location;
 	double radius;
 	double mass;
+	int bodyID;
 };
 
 // Bodies that move acording to some function
@@ -46,10 +52,11 @@ public:
 	double timeCur = timetart;
 	float deltaMul = 1; float XMul = 1; float YMul = 1;
 
-	// 0 for using the set speed, 1 for rigid eliptical orbit about a point, 2 for a following the function vectors
+	// 0 for using the set speed, 1 for rigid eliptical orbit about a point, 2 for a following the function vectors,
+	// 3 for gravity movement
 	char moveType = 0; 
 
-	Vector2D orbitPoint = Vector2D(0, 0); // XMul and YMul are used for the 
+	Body* orbitBody = nullptr; // the body to orbit
 
 	// These follow a c0 + c1*x + c2*x^2 + ... + c3*x^i format where c is the value at the index of the vector
 	// good for taylor series
@@ -75,16 +82,19 @@ public:
 		case 0: 
 			// Based on whatever the speed already is
 			break;
-		case 1: 
+		case 1:
 		{
 			// rigid eliptical orbit about orbitPoint
 			// calculate where we want to be then figure out speed
-			Vector2D pastLocation = location;
-			Vector2D newLocation = Vector2D(cos(timeCur) * XMul, sin(timeCur) * YMul);
-			newLocation = newLocation + orbitPoint;
+			if (orbitBody != nullptr) {
+				Vector2D pastLocation = location;
+				Vector2D newLocation = Vector2D(cos(timeCur) * XMul, sin(timeCur) * YMul);
+				newLocation = newLocation + orbitBody->location;
 
-			// Speed is not calculated based on where we want to be
-			speed = newLocation - pastLocation;
+				// Speed is not calculated based on where we want to be
+				speed = newLocation - pastLocation;
+				speed = speed * (1 / state->deltaT); // weight the speed to negate the later multiplication
+			}
 		}
 		break;
 		case 2:
@@ -101,6 +111,27 @@ public:
 				index++;
 			}
 			speed.x = xComp * XMul; speed.y = yComp * YMul;
+		}
+		break;
+		case 3:
+		{
+			// Movement with gravity, this is the only body movement option that uses collision
+			gravDelta = doGravity(state, location);
+			Vector2D newSpeed = speed + gravDelta;
+			
+			Vector2D dtSpeed = (newSpeed * state->deltaT);
+			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y)); // https://www.sunshine2k.de/articles/coding/vectorreflection/vectorreflection.html
+			if (collided != nullptr and collided != this) { // A body was collided with
+				Vector2D n;
+				Vector2D reflection;
+				Vector2D relativeSpeed = newSpeed - collided->speed;
+				n = location - collided->location;
+				n = n * (1 / n.magnitude());
+				reflection = relativeSpeed - n * 2 * newSpeed.dot(n);
+				newSpeed = reflection;
+			}
+			speed = newSpeed;
+			
 		}
 		break;
 		default:
@@ -142,6 +173,7 @@ public:
 	bool brake = false;
 	bool moving = false;
 	bool parked = false;
+	double moveSpeed = 1.0;
 	Body* parkedOn = nullptr;
 	Vector2D parkedDifference;
 	Body* lastCollided = nullptr;
