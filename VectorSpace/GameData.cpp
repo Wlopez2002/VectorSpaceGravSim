@@ -9,13 +9,10 @@ double calcGravity(double mass, double distance) {
 // TODO: This doesn't work. It should not need the * 2300
 Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation) {
 	Vector2D n = myLocation - toOrbit->location;
-	std::cout << n.magnitude() << "\n";
 	double velocity = sqrt((GCONST * toOrbit->mass * 2300) / n.magnitude());
-	std::cout << velocity << "\n";
 	n = Vector2D(-1 * n.y, n.x); // clockwise vector rotation;
 	n = n * (1 / n.magnitude());
 	n = n * velocity;
-	std::cout << n.toString() << "\n";
 	return n;
 }
 
@@ -112,45 +109,46 @@ Body* closestToPoint(GameState* state, Vector2D location) {
 
 // Creates a random solar system at a location
 void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius){
-	double remainingRadius = systemRadius;
 	srand(seed);
-	int max; int min; int curRad; int curWeight;
+	int curRad; int curWeightMod;
 
 	// the core of a solar system
-	min = 100; max = 500;
-	curRad = rand() % (max - min) + max;
+	curRad = rand() % (250 - 100) + 100;
+	curWeightMod = rand() % (250 - 10) + 10;
 
-	StaticGravBody* core = new StaticGravBody(location, 200, 10000);
-	core->bodyID = 1;
+	StaticGravBody* core = new StaticGravBody(location, curRad, curRad * curWeightMod);
+	core->bodyID = state->staticGravBodies.size();
 	state->staticGravBodies.push_back(core);
+
+	double usedRadius = core->radius + 10;
+	int maxPlanets = rand() % 10;
+	double spacePerPlanet = (systemRadius - usedRadius) / maxPlanets;
+	double maxRad = spacePerPlanet / 2;
+	if (maxRad > core->radius) {
+		maxRad = core->radius;
+	}
+	for (int i = 0; i < maxPlanets; i++) {
+		usedRadius = randBodyOrbiting(core, seed -= 20, state, usedRadius + (spacePerPlanet/2), maxRad);
+	}
+	return;
 }
 
-// creates a random dynamic body ordering another
-void randBodyOrbiting(Body* toOrbit, int distance, int seed, GameState* state, double radius, int moons) {
+// creates a random dynamic body orbiting another
+// returns the working radius
+double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distance, double maxRadius){
 	srand(seed);
-	int max = radius; int min = 10; int curRad; int curWeight;
-	int moonspace = radius / 4; // save a least 1/4 of the radius for the moons
-	if (moons) {
-		max = radius - moonspace;
-		curRad = rand() % (max - min) + max;
-	}
-	else {
-		curRad = rand() % (max - min) + max;
-	}
-	moonspace = radius - curRad - 2;  // moon space is now the space left with a little padding
+	double spentDistance;
+	int curRad; int curWeightMod;
 
-	curWeight = (rand() % 400 - 50) + 400;
-	DynamicGravBody* core = new DynamicGravBody(toOrbit->location + Vector2D(radius + toOrbit->radius, 0),
-		curRad, curWeight, 1, -3.1415, 3.1415, 1, radius + toOrbit->radius + distance, radius + toOrbit->radius + distance);
-	core->bodyID = state->dynamicGravBodies.size() + 1;
-	core->orbitBody = toOrbit;
+	curRad = rand() % (int) (maxRadius - 10) + 10;
+	curWeightMod = rand() % (25 - 5) + 5;
+	float randomTimeComp = (float)(rand() % (10-1) + 1) / 10;
 
-	//for (int i = 0; i < moons; i++) {
-	//	curRad = rand() % (max - min) + max;
-	//	curWeight = (rand() % 400 - 50) + 400;
-	//	DynamicGravBody* newMoon = new DynamicGravBody(toOrbit->location + Vector2D(radius + toOrbit->radius, 0),
-	//		curRad, curWeight, 1, -3.1415, 3.1415, 1, radius + toOrbit->radius + distance, radius + toOrbit->radius + distance);
-	//}
+	DynamicGravBody* bod = new DynamicGravBody(Vector2D(toOrbit->location.x + distance, 0), curRad, curRad * curWeightMod, 1, -3.1415, 3.1415, randomTimeComp, distance, distance);
+	bod->orbitBody = toOrbit;
+	bod->bodyID = state->dynamicGravBodies.size();
+	state->dynamicGravBodies.push_back(bod);
 
-	state->dynamicGravBodies.push_back(core);
+	spentDistance = distance + (2 * bod->radius);
+	return spentDistance;
 }

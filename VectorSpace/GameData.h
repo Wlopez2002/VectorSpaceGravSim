@@ -19,7 +19,7 @@ Vector2D doGravity(GameState* state, Vector2D location);
 Body* willCollide(GameState* state, Vector2D location);
 Body* closestToPoint(GameState* state, Vector2D location);
 void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius);
-void randBodyOrbiting(Body* toOrbit, int distance, int seed, GameState* state, double radius, int moons);
+double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distance, double maxRadius);
 
 // taylor series approx of Sin and Cos derivative
 static std::vector<double> taylorDSin = { 1.0, 0, -1.0 / 2, 0, 1.0 / 24, 0, -1.0 / 720, 0, 1.0 / 40320, 0, -1.0 / 3628800 };
