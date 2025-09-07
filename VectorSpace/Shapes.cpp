@@ -1,7 +1,6 @@
 #include "Shapes.h";
 
-
-void DrawCircle(SDL_Renderer* renderer, float centreX, float centreY, float radius)
+void DrawCircle(SDL_Renderer* renderer, float centerX, float centerY, float radius)
 {
     const float diameter = (radius * 2);
 
@@ -14,14 +13,14 @@ void DrawCircle(SDL_Renderer* renderer, float centreX, float centreY, float radi
     while (x >= y)
     {
         //  Each of the following renders an octant of the circle
-        SDL_RenderPoint(renderer, centreX + x, centreY - y);
-        SDL_RenderPoint(renderer, centreX + x, centreY + y);
-        SDL_RenderPoint(renderer, centreX - x, centreY - y);
-        SDL_RenderPoint(renderer, centreX - x, centreY + y);
-        SDL_RenderPoint(renderer, centreX + y, centreY - x);
-        SDL_RenderPoint(renderer, centreX + y, centreY + x);
-        SDL_RenderPoint(renderer, centreX - y, centreY - x);
-        SDL_RenderPoint(renderer, centreX - y, centreY + x);
+        SDL_RenderPoint(renderer, centerX + x, centerY - y);
+        SDL_RenderPoint(renderer, centerX + x, centerY + y);
+        SDL_RenderPoint(renderer, centerX - x, centerY - y);
+        SDL_RenderPoint(renderer, centerX - x, centerY + y);
+        SDL_RenderPoint(renderer, centerX + y, centerY - x);
+        SDL_RenderPoint(renderer, centerX + y, centerY + x);
+        SDL_RenderPoint(renderer, centerX - y, centerY - x);
+        SDL_RenderPoint(renderer, centerX - y, centerY + x);
 
         if (error <= 0)
         {

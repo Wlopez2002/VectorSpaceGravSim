@@ -46,7 +46,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 
     GameState* gameState = new GameState;
     gameState->player = new PlayerShip();
-    gameState->player->location = Vector2D(WINLENGTH/2, 200);
+    gameState->player->forceLocation(Vector2D(WINLENGTH / 2, 200));
 
     randSystemAt(Vector2D(0, 0), std::time(0), gameState, 1000);
 
@@ -91,13 +91,13 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     }
 
     Vector2D moveVect(0, 0);
-    double pMoveSpeed = gameState->player->moveSpeed;
+    double pMoveSpeed = gameState->player->getThrust();
 
     if (key_board_state[SDL_SCANCODE_Q]) {
-        gameState->player->moveSpeed -= 8 * gameState->deltaT;
+        gameState->player->incrementThrust(-8 * gameState->deltaT);
     }
     if (key_board_state[SDL_SCANCODE_E]) {
-        gameState->player->moveSpeed += 8 * gameState->deltaT;
+        gameState->player->incrementThrust(8 * gameState->deltaT);
     }
     if (key_board_state[SDL_SCANCODE_W]) {
         moveVect = moveVect + Vector2D(0, -pMoveSpeed);
@@ -111,13 +111,6 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     if (key_board_state[SDL_SCANCODE_D]) {
         moveVect = moveVect + Vector2D(pMoveSpeed, 0);
     }
-    if (moveVect.x == 0 and moveVect.y == 0) {
-        gameState->player->moving = false;
-        
-    }
-    else {
-        gameState->player->moving = true;
-    }
 
     gameState->player->deltaSpeed(moveVect);
 
@@ -125,7 +118,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         switch (event->key.key)
         {
         case SDLK_SPACE:
-            gameState->player->brake = true;
+            gameState->player->doBrake();
             break;
         default:
             break;
@@ -135,7 +128,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         switch (event->key.key)
         {
         case SDLK_SPACE:
-            gameState->player->brake = false;
+            gameState->player->unbrake();
             break;
         default:
             break;
@@ -175,8 +168,8 @@ bool render(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
     SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
 
-    double pxoffset = gameState->player->location.x - WINLENGTH / 2;
-    double pyoffset = gameState->player->location.y - WINHEIGHT / 2;
+    double pxoffset = gameState->player->getLocation().x - WINLENGTH / 2;
+    double pyoffset = gameState->player->getLocation().y - WINHEIGHT / 2;
 
     DrawCircle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
 
@@ -187,18 +180,19 @@ bool render(GameState* gameState) {
         DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
     }
 
-    renderText("Player Location" + gameState->player->location.toString(), 10, 5, 24, 0x00FFFF, 0.5);
-    renderText("Player Speed   " + gameState->player->speed.toString(), 10, 40, 24, 0x00FFFF, 0.5);
-    renderText("Gravity Vector " + gameState->player->gravDelta.toString(), 10, 80, 24, 0x00FFFF, 0.5);
-    renderText("Movement Vector" + gameState->player->playerDelta.toString(), 10, 120, 24, 0x00FFFF, 0.5);
-    renderText("Movement Thrust " + std::to_string(gameState->player->moveSpeed), 10, 160, 24, 0x00FFFF, 0.5);
-    if (gameState->player->parked) {
+    renderText("Player Location" + gameState->player->getLocation().toString(), 10, 5, 24, 0x00FFFF, 0.5);
+    renderText("Player Speed   " + gameState->player->getSpeed().toString(), 10, 40, 24, 0x00FFFF, 0.5);
+    renderText("Gravity Vector " + gameState->player->getGravDelta().toString(), 10, 80, 24, 0x00FFFF, 0.5);
+    renderText("Movement Vector" + gameState->player->getPlayerDelta().toString(), 10, 120, 24, 0x00FFFF, 0.5);
+    renderText("Thrust " + std::to_string(gameState->player->getThrust()), 10, 160, 24, 0x00FFFF, 0.5);
+    renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 200, 24, 0x00FFFF, 0.5);
+    if (gameState->player->isParked()) {
         renderText("parked = true", 1000, 5, 24, 0x00FFFF, 0.5);
     }
     else {
         renderText("parked = false", 1000, 5, 24, 0x00FFFF, 0.5);
     }
-    if (gameState->player->moving) {
+    if (gameState->player->isParked()) {
         renderText("moving = true", 1000, 40, 24, 0x00FFFF, 0.5);
     }
     else {

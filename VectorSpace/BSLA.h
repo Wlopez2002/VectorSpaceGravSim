@@ -1,8 +1,15 @@
+/*
+Bill's Shity Linear Algebra
+*/
+
 #pragma once
 
 #include <string>
 #include <math.h>
 
+/*
+* Class for a two-dimensional vector with some basic linear algebra operations built in.
+*/
 class Vector2D {
 public:
 	double x; double y;
@@ -30,6 +37,9 @@ public:
 		product.y = y * scalar;
 		return product;
 	}
+	bool operator==(Vector2D vect) {
+		return (x == vect.x) and (y == vect.y);
+	}
 	double dot(Vector2D vect) {
 		return (x * vect.x) + (y * vect.y);
 	}
@@ -41,6 +51,13 @@ public:
 	}
 };
 
+/*
+* Class for a 2x2 matrix and some basic operators related to it.
+* This class uses the Vector2D class for it's rows.
+* 
+* |v1.x v1.y|
+* |v2.x v2.y| 
+*/
 class Matrix2D {
 public:
 	Vector2D v1; Vector2D v2;

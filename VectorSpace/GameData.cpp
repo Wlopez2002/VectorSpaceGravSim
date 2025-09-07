@@ -1,12 +1,14 @@
 #include "GameData.h"
 #include <iostream>
 
+// Calculates the force of gravity based on mass, distance, and the gravity constant.
 double calcGravity(double mass, double distance) {
 	double grav = (GCONST * mass) / (distance * distance);
 	return grav;
 }
 
-// TODO: This doesn't work. It should not need the * 2300
+// TODO: This doesn't work well. * 2300 seems to work but it is likely not the correct constant.
+// This calculates a speed vector needed to orbit a body at some location.
 Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation) {
 	Vector2D n = myLocation - toOrbit->location;
 	double velocity = sqrt((GCONST * toOrbit->mass * 2300) / n.magnitude());
@@ -16,6 +18,7 @@ Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation) {
 	return n;
 }
 
+// Calculates the speed vector bodies are causing to a location from their gravity.
 Vector2D doGravity(GameState* state, Vector2D location) {
 	std::vector<StaticGravBody*> staticGravBodies = state->staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies = state->dynamicGravBodies;
@@ -59,7 +62,7 @@ Vector2D doGravity(GameState* state, Vector2D location) {
 }
 
 
-// checks if a location is in a body
+// checks if a location is within a body.
 Body* willCollide(GameState* state, Vector2D location) {
 	std::vector<StaticGravBody*> staticGravBodies = state->staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies = state->dynamicGravBodies;
@@ -80,7 +83,7 @@ Body* willCollide(GameState* state, Vector2D location) {
 	return nullptr;
 }
 
-// gets the closest body to a location
+// gets the closest body to a location.
 Body* closestToPoint(GameState* state, Vector2D location) {
 	Body* toReturn = nullptr;
 	double curLowMag = -1;
@@ -107,7 +110,7 @@ Body* closestToPoint(GameState* state, Vector2D location) {
 	return toReturn;
 }
 
-// Creates a random solar system at a location
+// Creates a random solar system at a location.
 void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius){
 	srand(seed);
 	int curRad; int curWeightMod;
@@ -134,13 +137,13 @@ void randSystemAt(Vector2D location, int seed, GameState* state, double systemRa
 }
 
 // creates a random dynamic body orbiting another
-// returns the working radius
+// returns the radius it actualy used.
 double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distance, double maxRadius){
 	srand(seed);
 	double spentDistance;
 	int curRad; int curWeightMod;
 
-	curRad = rand() % (int) (maxRadius - 10) + 10;
+	curRad = rand() % (int) (maxRadius - 15) + 15;
 	curWeightMod = rand() % (25 - 5) + 5;
 	float randomTimeComp = (float)(rand() % (10-1) + 1) / 10;
 
