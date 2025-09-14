@@ -48,7 +48,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->player = new PlayerShip();
     gameState->player->forceLocation(Vector2D(WINLENGTH / 2, 200));
 
-    randSystemAt(Vector2D(0, 0), std::time(0), gameState, 1000);
+    generatePlaySpace(1000, 500, std::time(0), gameState);
 
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
@@ -144,7 +144,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     if (!update(gameState)) {
         return SDL_APP_SUCCESS;
     }
-    render(gameState);
+    render(gameState); //TODO: it would be nice if a wraparound teleport was smoother.
 
     return SDL_APP_CONTINUE;
 }
@@ -171,8 +171,11 @@ bool render(GameState* gameState) {
     double pxoffset = gameState->player->getLocation().x - WINLENGTH / 2;
     double pyoffset = gameState->player->getLocation().y - WINHEIGHT / 2;
 
+
+    // Draw Player
     DrawCircle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
 
+    // Draw Bodies
     for (auto body : gameState->staticGravBodies) {
         DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
     }
@@ -180,6 +183,7 @@ bool render(GameState* gameState) {
         DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
     }
 
+    // Draw UI
     renderText("Player Location" + gameState->player->getLocation().toString(), 10, 5, 24, 0x00FFFF, 0.5);
     renderText("Player Speed   " + gameState->player->getSpeed().toString(), 10, 40, 24, 0x00FFFF, 0.5);
     renderText("Gravity Vector " + gameState->player->getGravDelta().toString(), 10, 80, 24, 0x00FFFF, 0.5);

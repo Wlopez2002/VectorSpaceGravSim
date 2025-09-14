@@ -110,6 +110,16 @@ Body* closestToPoint(GameState* state, Vector2D location) {
 	return toReturn;
 }
 
+// Fills a play are with systems.
+void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* state) {
+	for (double y = -AREASIZE + systemRad; y < AREASIZE; y = y + 2*systemRad + systemPad) {
+		for (double x = -AREASIZE + systemRad; x < AREASIZE; x = x + 2*systemRad + systemPad) {
+			randSystemAt(Vector2D(x,y), seed++, state, systemRad);
+		}
+	}
+}
+
+
 // Creates a random solar system at a location.
 void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius){
 	srand(seed);

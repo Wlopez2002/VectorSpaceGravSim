@@ -16,6 +16,7 @@ class StaticGravBody;
 class PlayerShip;
 
 static const double GCONST = 2.0; // Gravity constant
+static const double AREASIZE = 4000; // the size of an area
 
 // See GameData.cpp for descriptions.
 double calcGravity(double mass, double distance);
@@ -23,6 +24,7 @@ Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation);
 Vector2D doGravity(GameState* state, Vector2D location);
 Body* willCollide(GameState* state, Vector2D location);
 Body* closestToPoint(GameState* state, Vector2D location);
+void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* state);
 void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius);
 double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distance, double maxRadius);
 
@@ -154,17 +156,17 @@ public:
 		location = location + (speed * state->deltaT);
 
 		// Wrap around if an edge is reached.
-		if (location.x < -2000) {
-			location.x = 2000;
+		if (location.x < -AREASIZE) {
+			location.x = AREASIZE;
 		}
-		if (location.x > 2000) {
-			location.x = -2000;
+		if (location.x > AREASIZE) {
+			location.x = -AREASIZE;
 		}
-		if (location.y < -2000) {
-			location.y = 2000;
+		if (location.y < -AREASIZE) {
+			location.y = AREASIZE;
 		}
-		if (location.y > 2000) {
-			location.y = -2000;
+		if (location.y > AREASIZE) {
+			location.y = -AREASIZE;
 		}
 	}
 };
@@ -320,17 +322,17 @@ public:
 		}
 
 		// Wrap around
-		if (location.x < -2000) {
-			location.x = 2000;
+		if (location.x < -AREASIZE) {
+			location.x = AREASIZE;
 		}
-		if (location.x > 2000) {
-			location.x = -2000;
+		if (location.x > AREASIZE) {
+			location.x = -AREASIZE;
 		}
-		if (location.y < -2000) {
-			location.y = 2000;
+		if (location.y < -AREASIZE) {
+			location.y = AREASIZE;
 		}
-		if (location.y > 2000) {
-			location.y = -2000;
+		if (location.y > AREASIZE) {
+			location.y = -AREASIZE;
 		}
 	}
 
