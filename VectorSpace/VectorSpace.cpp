@@ -95,10 +95,10 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     double pMoveSpeed = gameState->player->getThrust();
 
     if (key_board_state[SDL_SCANCODE_Q]) {
-        gameState->player->incrementThrust(-8 * gameState->deltaT);
+        gameState->player->incrementThrust(-12 * gameState->deltaT);
     }
     if (key_board_state[SDL_SCANCODE_E]) {
-        gameState->player->incrementThrust(8 * gameState->deltaT);
+        gameState->player->incrementThrust(12 * gameState->deltaT);
     }
     if (key_board_state[SDL_SCANCODE_W]) {
         moveVect = moveVect + Vector2D(0, -pMoveSpeed);
@@ -138,14 +138,15 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     return SDL_APP_CONTINUE;
 }
 
-
+float a = 0;
+float b = 0;
 SDL_AppResult SDL_AppIterate(void* appstate)
 {
     GameState* gameState = static_cast<GameState*> (appstate);
     if (!update(gameState)) {
         return SDL_APP_SUCCESS;
     }
-    render(gameState); //TODO: it would be nice if a wraparound teleport was smoother.
+    render(gameState);
 
     return SDL_APP_CONTINUE;
 }
@@ -156,10 +157,10 @@ bool update(GameState* gameState) {
     DTNOW = SDL_GetPerformanceCounter();
     gameState->deltaT = ((double)((DTNOW - DTLAST) * 1000 / (double)SDL_GetPerformanceFrequency())) * 0.001;
 
-    gameState->player->update(gameState);
     for (auto body : gameState->dynamicGravBodies) {
         body->update(gameState);
     }
+    gameState->player->update(gameState);
     return true;
 }
 
@@ -199,6 +200,7 @@ bool render(GameState* gameState) {
     renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 110, 12, 12);
     renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
     renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
+    renderText("FPS " + std::to_string(1/gameState->deltaT), 10, 750, 12, 12);
     if (gameState->player->isParked()) {
         renderText("parked = true", 600, 5, 12, 12);
     }

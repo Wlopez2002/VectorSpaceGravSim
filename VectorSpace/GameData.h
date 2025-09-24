@@ -156,18 +156,18 @@ public:
 		location = location + (speed * state->deltaT);
 
 		// Wrap around if an edge is reached.
-		if (location.x < -AREASIZE) {
-			location.x = AREASIZE;
-		}
-		if (location.x > AREASIZE) {
-			location.x = -AREASIZE;
-		}
-		if (location.y < -AREASIZE) {
-			location.y = AREASIZE;
-		}
-		if (location.y > AREASIZE) {
-			location.y = -AREASIZE;
-		}
+		//if (location.x < -AREASIZE) {
+		//	location.x = AREASIZE;
+		//}
+		//if (location.x > AREASIZE) {
+		//	location.x = -AREASIZE;
+		//}
+		//if (location.y < -AREASIZE) {
+		//	location.y = AREASIZE;
+		//}
+		//if (location.y > AREASIZE) {
+		//	location.y = -AREASIZE;
+		//}
 	}
 };
 
@@ -211,10 +211,18 @@ public:
 	bool isMoving() { return moving; }
 	bool isParked() { return parked; }
 	double getThrust() { return thrust; }
-	void incrementThrust(double incr) { thrust += incr; }
 	void doBrake() { brake = true; }
 	void unbrake() { brake = false; }
 	void forceLocation(Vector2D newLoc) { location = newLoc; }
+	void incrementThrust(double incr) { 
+		thrust += incr;
+		if (thrust > 6) {
+			thrust = 6;
+		}
+		if (thrust < 0) {
+			thrust = 0;
+		}
+	}
 	void deltaSpeed(Vector2D accel) {
 		if (accel == Vector2D(0, 0)) {
 			moving = false;
@@ -232,7 +240,10 @@ public:
 		if (!parked) {
 			gravDelta = doGravity(state, location);
 			Vector2D newSpeed = speed;
-			newSpeed = newSpeed + gravDelta + playerDelta;
+			if (!brake) {
+				newSpeed = newSpeed + playerDelta;
+			}
+			newSpeed = newSpeed + gravDelta;
 
 			// cap the new speed
 			if (newSpeed.x > 1000) {
@@ -255,26 +266,23 @@ public:
 
 			// deltaT the new Speed for collision check.
 			Vector2D dtSpeed = (newSpeed * state->deltaT);
-			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y)); // https://www.sunshine2k.de/articles/coding/vectorreflection/vectorreflection.html
+			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
 			if (collided != nullptr) { // A body was collided with
 				Vector2D n;
-				Vector2D reflection;
 				Vector2D relativeSpeed = newSpeed - collided->speed;
 				n = location - collided->location;
 				n = n * (1 / n.magnitude());
-				reflection = relativeSpeed - n * 2 * newSpeed.dot(n);
-				newSpeed = reflection * 0.75; // slow the reflection speed as a friction;
+
+				newSpeed = newSpeed * 0.75; // a little friction
+				double impulse = relativeSpeed.dot(n) * -(1.5);
+				std::cout << (n * impulse).toString() << " " << newSpeed.toString() << "\n";
+				newSpeed = newSpeed + (n * impulse);
 				lastCollided = collided;
 
 				// Check if the player is to be damaged from the impact;
 				if (!(hitImmunity > 0.0) and relativeSpeed.magnitude() > 400) {
-					damage(relativeSpeed.magnitude()/300);
+					damage(newSpeed.magnitude()/300);
 					hitImmunity = 1;
-				}
-
-				if ((collided->location - location).magnitude() < collided->radius) { // resolve if inside a body.
-					location = collided->location + (n * (1 / n.magnitude())) * (collided->radius + 10); // move along vector n, IE where they collison would have been.
-					newSpeed =  newSpeed + collided->speed;
 				}
 			}
 
@@ -293,10 +301,7 @@ public:
 				}
 			}
 
-			// If the player is not braking, then the speed can be updated to newSpeed;
-			if (!brake) {
-				speed = newSpeed;
-			}
+			speed = newSpeed;
 		}
 
 		// if the player is braking and not parked.
@@ -321,18 +326,18 @@ public:
 			location = location + (speed * state->deltaT);
 		}
 
-		// Wrap around
+		// Stop the player of they would go over the AREASIZE
 		if (location.x < -AREASIZE) {
-			location.x = AREASIZE;
-		}
-		if (location.x > AREASIZE) {
 			location.x = -AREASIZE;
 		}
+		if (location.x > AREASIZE) {
+			location.x = AREASIZE;
+		}
 		if (location.y < -AREASIZE) {
-			location.y = AREASIZE;
+			location.y = -AREASIZE;
 		}
 		if (location.y > AREASIZE) {
-			location.y = -AREASIZE;
+			location.y = AREASIZE;
 		}
 	}
 

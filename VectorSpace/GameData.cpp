@@ -19,6 +19,7 @@ Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation) {
 }
 
 // Calculates the speed vector bodies are causing to a location from their gravity.
+// TODO: Skip Calculaton when the gravity impact would be negligible
 Vector2D doGravity(GameState* state, Vector2D location) {
 	std::vector<StaticGravBody*> staticGravBodies = state->staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies = state->dynamicGravBodies;
@@ -26,6 +27,9 @@ Vector2D doGravity(GameState* state, Vector2D location) {
 
 	for (auto body : staticGravBodies) {
 		Vector2D locVec = body->location - location;
+		if (locVec.magnitude() > 1000) {
+			continue;
+		}
 
 		double grav = calcGravity(body->mass, locVec.magnitude());
 
@@ -36,7 +40,7 @@ Vector2D doGravity(GameState* state, Vector2D location) {
 	}  
 	for (auto body : dynamicGravBodies) {
 		Vector2D locVec = body->location - location;
-		if (locVec.magnitude() == 0) {
+		if (locVec.magnitude() == 0 or locVec.magnitude() > 1000) {
 			continue;
 		}
 
@@ -67,13 +71,13 @@ Body* willCollide(GameState* state, Vector2D location) {
 	std::vector<StaticGravBody*> staticGravBodies = state->staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies = state->dynamicGravBodies;
 	for (auto body : staticGravBodies) {
-		Vector2D locVec = body->location - location;
+		Vector2D locVec = (body->location+body->speed * state->deltaT) - location;
 		if (locVec.magnitude() < body->radius) {
 			return body;
 		}
 	}
 	for (auto body : dynamicGravBodies) {
-		Vector2D locVec = body->location - location;
+		Vector2D locVec = (body->location + body->speed * state->deltaT) - location;
 		if (locVec.magnitude() != 0) {
 			if (locVec.magnitude() < body->radius) {
 				return body;
