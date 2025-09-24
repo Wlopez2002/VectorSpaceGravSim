@@ -48,7 +48,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->player = new PlayerShip();
     gameState->player->forceLocation(Vector2D(WINLENGTH / 2, 200));
 
-    generatePlaySpace(1000, 500, std::time(0), gameState);
+    //generatePlaySpace(1000, 500, std::time(0), gameState);
+    generatePlaySpace(1000, 500, 123, gameState);
 
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
@@ -162,6 +163,7 @@ bool update(GameState* gameState) {
     return true;
 }
 
+//TODO: render is eating the lion's share of the cpu
 bool render(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
@@ -177,10 +179,16 @@ bool render(GameState* gameState) {
 
     // Draw Bodies
     for (auto body : gameState->staticGravBodies) {
-        DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+        double dist = (body->location - gameState->player->getLocation()).magnitude() - body->radius;
+        if (dist < WINLENGTH) { // check if the body can be seen by the player
+            DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+        }
     }
     for (auto body : gameState->dynamicGravBodies) {
-        DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+        double dist = (body->location - gameState->player->getLocation()).magnitude() - body->radius;
+        if (dist < WINLENGTH) { // check if the body can be seen by the player
+            DrawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+        }
     }
 
     // Draw UI
