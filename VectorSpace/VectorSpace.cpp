@@ -21,20 +21,20 @@ const bool* key_board_state = SDL_GetKeyboardState(NULL);
 
 bool update(GameState* gameState);
 bool render(GameState* gameState);
-void renderText(std::string text, int x, int y, int kerning, int colorHex, double scale);
+void renderText(std::string text, int x, int y, int kerning, int FontSize);
 
 Uint64 DTNOW = SDL_GetPerformanceCounter();
 Uint64 DTLAST = 0;
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 {
     /* Create the window */
-    if (!SDL_CreateWindowAndRenderer("Hello World", WINLENGTH, WINHEIGHT, SDL_WINDOW_KEYBOARD_GRABBED, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("Vector Space", WINLENGTH, WINHEIGHT, SDL_WINDOW_KEYBOARD_GRABBED, &window, &renderer)) {
         SDL_Log("Couldn't create window and renderer: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    SDL_SetRenderScale(renderer, WINLENGTH / WINLENGTH, WINLENGTH / WINLENGTH);
     SDL_SetWindowResizable(window, true);
     WINSCALE = (double)WINLENGTH / 1050.0;
+    SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
     
     SDL_Surface* textBMPSurf = SDL_LoadBMP("Resources/font.bmp");
     letterTexture = SDL_CreateTextureFromSurface(renderer, textBMPSurf);
@@ -87,8 +87,8 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     }
     if (event->type == SDL_EVENT_WINDOW_RESIZED) {
         SDL_GetWindowSize(window, &WINLENGTH, &WINHEIGHT);
-        // TODO
-        //WINSCALE = (double) WINLENGTH / 1050.0;
+        //WINSCALE = (double)WINLENGTH / 1050.0;
+        SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
     }
 
     Vector2D moveVect(0, 0);
@@ -168,7 +168,6 @@ bool render(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
 
     double pxoffset = gameState->player->getLocation().x - WINLENGTH / 2;
     double pyoffset = gameState->player->getLocation().y - WINHEIGHT / 2;
@@ -192,23 +191,25 @@ bool render(GameState* gameState) {
     }
 
     // Draw UI
-    renderText("Player Location" + gameState->player->getLocation().toString(), 10, 5, 24, 0x00FFFF, 0.5);
-    renderText("Player Speed   " + gameState->player->getSpeed().toString(), 10, 40, 24, 0x00FFFF, 0.5);
-    renderText("Gravity Vector " + gameState->player->getGravDelta().toString(), 10, 80, 24, 0x00FFFF, 0.5);
-    renderText("Movement Vector" + gameState->player->getPlayerDelta().toString(), 10, 120, 24, 0x00FFFF, 0.5);
-    renderText("Thrust " + std::to_string(gameState->player->getThrust()), 10, 160, 24, 0x00FFFF, 0.5);
-    renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 200, 24, 0x00FFFF, 0.5);
+    renderText("Player Location" + gameState->player->getLocation().toString(), 10, 10, 12, 12);
+    renderText("Player Speed   " + gameState->player->getSpeed().toString(), 10, 30, 12, 12);
+    renderText("Gravity Vector " + gameState->player->getGravDelta().toString(), 10, 50, 12, 12);
+    renderText("Movement Vector" + gameState->player->getPlayerDelta().toString(), 10, 70, 12, 12);
+    renderText("Thrust " + std::to_string(gameState->player->getThrust()), 10, 90, 12, 12);
+    renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 110, 12, 12);
+    renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
+    renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
     if (gameState->player->isParked()) {
-        renderText("parked = true", 1000, 5, 24, 0x00FFFF, 0.5);
+        renderText("parked = true", 600, 5, 12, 12);
     }
     else {
-        renderText("parked = false", 1000, 5, 24, 0x00FFFF, 0.5);
+        renderText("parked = false", 600, 5, 12, 12);
     }
     if (gameState->player->isParked()) {
-        renderText("moving = true", 1000, 40, 24, 0x00FFFF, 0.5);
+        renderText("moving = true", 600, 40, 12, 12);
     }
     else {
-        renderText("moving = false", 1000, 40, 24, 0x00FFFF, 0.5);
+        renderText("moving = false", 600, 40, 12, 12);
     }
     
 
@@ -216,22 +217,21 @@ bool render(GameState* gameState) {
     return 1;
 }
 
-void renderText(std::string text, int x, int y, int kerning, int colorHex, double scale) {
-    SDL_SetRenderScale(renderer, WINSCALE * scale, WINSCALE * scale);
+void renderText(std::string text, int x, int y, int kerning, int FontSize) {// int colorHex, int FontSize) {
     SDL_FRect rect;
     SDL_FRect selectRect;
     rect.x = x; rect.y = y;
-    rect.h = 32; rect.w = 32;
+    rect.h = FontSize; rect.w = FontSize;
     selectRect.h = 32; selectRect.w = 32;
 
-    if (!SDL_SetTextureColorMod(letterTexture, (colorHex & 0xFF0000) >> 16, (colorHex & 0x00FF00) >> 8, colorHex & 0x0000FF)) {
-        std::cout << "set color failure\n";
-    }
+    //if (!SDL_SetTextureColorMod(letterTexture, (colorHex & 0xFF0000) >> 16, (colorHex & 0x00FF00) >> 8, colorHex & 0x0000FF)) {
+    //    std::cout << "set color failure\n";
+    //}
 
     for (char c : text) {
         int choice = c - 32;
         if (c == '\n') {
-            rect.y += 32;
+            rect.y += FontSize;
             rect.x = x;
         }
         if (choice < 0 || choice > 127 - 32) {
@@ -245,8 +245,7 @@ void renderText(std::string text, int x, int y, int kerning, int colorHex, doubl
         SDL_RenderTexture(renderer, letterTexture, &selectRect, &rect);
         rect.x += kerning;
     }
-    if (!SDL_SetTextureColorMod(letterTexture, 255, 255, 255)) {
-        std::cout << "reset color failure\n";
-    }
-    SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
+    //if (!SDL_SetTextureColorMod(letterTexture, 255, 255, 255)) {
+    //    std::cout << "reset color failure\n";
+    //}
 }
