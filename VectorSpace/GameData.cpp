@@ -137,7 +137,7 @@ void randSystemAt(Vector2D location, int seed, GameState* state, double systemRa
 	core->bodyID = state->staticGravBodies.size();
 	state->staticGravBodies.push_back(core);
 
-	double usedRadius = core->radius + 10;
+	double usedRadius = core->radius + 40;
 	int maxPlanets = rand() % 10;
 	double spacePerPlanet = (systemRadius - usedRadius) / maxPlanets;
 	double maxRad = spacePerPlanet / 2;
@@ -145,7 +145,7 @@ void randSystemAt(Vector2D location, int seed, GameState* state, double systemRa
 		maxRad = core->radius;
 	}
 	for (int i = 0; i < maxPlanets; i++) {
-		usedRadius = randBodyOrbiting(core, seed -= 20, state, usedRadius + (spacePerPlanet/2), maxRad);
+		usedRadius = randBodyOrbiting(core, seed -= 20, state, usedRadius + (spacePerPlanet/2), maxRad) + 10;
 	}
 	return;
 }
@@ -157,8 +157,8 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 	double spentDistance;
 	int curRad; int curWeightMod;
 
-	curRad = rand() % (int) (maxRadius - 15) + 15;
-	curWeightMod = rand() % (25 - 5) + 5;
+	curRad = rand() % (int) (maxRadius - 20) + 20;
+	curWeightMod = rand() % (15 - 5) + 5;
 	float randomTimeComp = (float)(rand() % (10-1) + 1) / 10;
 
 	DynamicGravBody* bod = new DynamicGravBody(Vector2D(toOrbit->location.x + distance, 0), curRad, curRad * curWeightMod, 1, -3.1415, 3.1415, randomTimeComp, distance, distance);

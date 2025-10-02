@@ -33,8 +33,11 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 static std::vector<double> taylorDSin = { 1.0, 0, -1.0 / 2, 0, 1.0 / 24, 0, -1.0 / 720, 0, 1.0 / 40320, 0, -1.0 / 3628800 };
 static std::vector<double> tayloyDCos = { 0, -1.0, 0, 1.0 / 6, 0, -1.0 / 120, 0, 1.0 / 5040, 0, -1.0 / 362880 };
 
+enum Stage {StageStart, StagePlay};
+
 // This structure contains all data needed to run the game
 struct GameState {
+	Stage curState;
 	double deltaT;
 	PlayerShip* player;
 	std::vector<StaticGravBody*> staticGravBodies;
@@ -154,20 +157,6 @@ public:
 		}
 
 		location = location + (speed * state->deltaT);
-
-		// Wrap around if an edge is reached.
-		//if (location.x < -AREASIZE) {
-		//	location.x = AREASIZE;
-		//}
-		//if (location.x > AREASIZE) {
-		//	location.x = -AREASIZE;
-		//}
-		//if (location.y < -AREASIZE) {
-		//	location.y = AREASIZE;
-		//}
-		//if (location.y > AREASIZE) {
-		//	location.y = -AREASIZE;
-		//}
 	}
 };
 
@@ -199,8 +188,14 @@ private:
 	Vector2D parkedDifference;
 	Body* lastCollided = nullptr;
 public:
-	int damage(int dam) {
+	int damage(int dam, GameState* state) {
 		health -= dam;
+
+		if (health <= 0) {
+			health = 10;
+			forceLocation(Vector2D(0, 0));
+			state->curState = StageStart;
+		}
 		return health;
 	}
 	int getHealth() { return health;}
@@ -245,20 +240,6 @@ public:
 			}
 			newSpeed = newSpeed + gravDelta;
 
-			// cap the new speed
-			if (newSpeed.x > 1000) {
-				newSpeed.x = 1000;
-			}
-			if (newSpeed.x < -1000) {
-				newSpeed.x = -1000;
-			}
-			if (newSpeed.y > 1000) {
-				newSpeed.y = 1000;
-			}
-			if (newSpeed.y < -1000) {
-				newSpeed.y = -1000;
-			}
-
 			// decrements if the player is hit immune
 			if (hitImmunity > 0.0) {
 				hitImmunity -= state->deltaT;
@@ -275,13 +256,12 @@ public:
 
 				newSpeed = newSpeed * 0.75; // a little friction
 				double impulse = relativeSpeed.dot(n) * -(1.5);
-				std::cout << (n * impulse).toString() << " " << newSpeed.toString() << "\n";
 				newSpeed = newSpeed + (n * impulse);
 				lastCollided = collided;
 
 				// Check if the player is to be damaged from the impact;
 				if (!(hitImmunity > 0.0) and relativeSpeed.magnitude() > 400) {
-					damage(newSpeed.magnitude()/300);
+					damage(newSpeed.magnitude()/300, state);
 					hitImmunity = 1;
 				}
 			}
@@ -301,6 +281,20 @@ public:
 				}
 			}
 
+			// cap the new speed
+			if (newSpeed.x > 1000) {
+				newSpeed.x = 1000;
+			}
+			if (newSpeed.x < -1000) {
+				newSpeed.x = -1000;
+			}
+			if (newSpeed.y > 1000) {
+				newSpeed.y = 1000;
+			}
+			if (newSpeed.y < -1000) {
+				newSpeed.y = -1000;
+			}
+
 			speed = newSpeed;
 		}
 
@@ -318,6 +312,7 @@ public:
 		}
 
 		// if the player is parked match their speed with what they are parked on.
+		// Otherwise let the player move as normal
 		if (parked) {
 			speed = parkedOn->speed;
 			location = (parkedOn->location - parkedDifference);

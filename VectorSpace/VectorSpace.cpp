@@ -20,7 +20,8 @@ static int WINHEIGHT = 800;
 const bool* key_board_state = SDL_GetKeyboardState(NULL);
 
 bool update(GameState* gameState);
-bool render(GameState* gameState);
+void renderMenu(GameState* gameState);
+void renderGame(GameState* gameState);
 void renderText(std::string text, int x, int y, int kerning, int FontSize);
 
 Uint64 DTNOW = SDL_GetPerformanceCounter();
@@ -45,11 +46,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     SDL_DestroySurface(textBMPSurf);
 
     GameState* gameState = new GameState;
+    gameState->curState = StageStart;
     gameState->player = new PlayerShip();
-    gameState->player->forceLocation(Vector2D(WINLENGTH / 2, 200));
+    gameState->player->forceLocation(Vector2D(0, 0));
 
-    //generatePlaySpace(1000, 500, std::time(0), gameState);
-    generatePlaySpace(1000, 500, 123, gameState);
+    generatePlaySpace(1000, 500, std::time(0), gameState);
 
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
@@ -93,60 +94,82 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 
     Vector2D moveVect(0, 0);
     double pMoveSpeed = gameState->player->getThrust();
-
-    if (key_board_state[SDL_SCANCODE_Q]) {
-        gameState->player->incrementThrust(-12 * gameState->deltaT);
-    }
-    if (key_board_state[SDL_SCANCODE_E]) {
-        gameState->player->incrementThrust(12 * gameState->deltaT);
-    }
-    if (key_board_state[SDL_SCANCODE_W]) {
-        moveVect = moveVect + Vector2D(0, -pMoveSpeed);
-    }
-    if (key_board_state[SDL_SCANCODE_S]) {
-        moveVect = moveVect + Vector2D(0, pMoveSpeed);
-    }
-    if (key_board_state[SDL_SCANCODE_A]) {
-        moveVect = moveVect + Vector2D(-pMoveSpeed, 0);
-    }
-    if (key_board_state[SDL_SCANCODE_D]) {
-        moveVect = moveVect + Vector2D(pMoveSpeed, 0);
-    }
-
-    gameState->player->deltaSpeed(moveVect);
-
-    if (event->type == SDL_EVENT_KEY_DOWN) {
-        switch (event->key.key)
-        {
-        case SDLK_SPACE:
-            gameState->player->doBrake();
-            break;
-        default:
-            break;
+    switch (gameState->curState)
+    {
+    case StageStart:
+        if (event->key.key == SDLK_SPACE) {
+            gameState->curState = StagePlay;
         }
-    }
-    if (event->type == SDL_EVENT_KEY_UP) {
-        switch (event->key.key)
-        {
-        case SDLK_SPACE:
-            gameState->player->unbrake();
-            break;
-        default:
-            break;
+        break;
+    case StagePlay:
+        if (key_board_state[SDL_SCANCODE_Q]) {
+            gameState->player->incrementThrust(-12 * gameState->deltaT);
         }
+        if (key_board_state[SDL_SCANCODE_E]) {
+            gameState->player->incrementThrust(12 * gameState->deltaT);
+        }
+        if (key_board_state[SDL_SCANCODE_W]) {
+            moveVect = moveVect + Vector2D(0, -pMoveSpeed);
+        }
+        if (key_board_state[SDL_SCANCODE_S]) {
+            moveVect = moveVect + Vector2D(0, pMoveSpeed);
+        }
+        if (key_board_state[SDL_SCANCODE_A]) {
+            moveVect = moveVect + Vector2D(-pMoveSpeed, 0);
+        }
+        if (key_board_state[SDL_SCANCODE_D]) {
+            moveVect = moveVect + Vector2D(pMoveSpeed, 0);
+        }
+
+        gameState->player->deltaSpeed(moveVect);
+
+        if (event->type == SDL_EVENT_KEY_DOWN) {
+            switch (event->key.key)
+            {
+            case SDLK_SPACE:
+                gameState->player->doBrake();
+                break;
+            default:
+                break;
+            }
+        }
+        if (event->type == SDL_EVENT_KEY_UP) {
+            switch (event->key.key)
+            {
+            case SDLK_SPACE:
+                gameState->player->unbrake();
+                break;
+            default:
+                break;
+            }
+        }
+        break;
+    default:
+        break;
     }
+
     return SDL_APP_CONTINUE;
 }
 
-float a = 0;
-float b = 0;
+
 SDL_AppResult SDL_AppIterate(void* appstate)
 {
     GameState* gameState = static_cast<GameState*> (appstate);
     if (!update(gameState)) {
         return SDL_APP_SUCCESS;
     }
-    render(gameState);
+    switch (gameState->curState)
+    {
+    case StageStart:
+        renderMenu(gameState);
+        break;
+    case StagePlay:
+        renderGame(gameState);
+        break;
+    default:
+        break;
+    }
+    
 
     return SDL_APP_CONTINUE;
 }
@@ -157,22 +180,40 @@ bool update(GameState* gameState) {
     DTNOW = SDL_GetPerformanceCounter();
     gameState->deltaT = ((double)((DTNOW - DTLAST) * 1000 / (double)SDL_GetPerformanceFrequency())) * 0.001;
 
-    for (auto body : gameState->dynamicGravBodies) {
-        body->update(gameState);
+    switch (gameState->curState)
+    {
+    case StageStart:
+        break;
+    case StagePlay:
+        for (auto body : gameState->dynamicGravBodies) {
+            body->update(gameState);
+        }
+        gameState->player->update(gameState);
+        break;
+    default:
+        break;
     }
-    gameState->player->update(gameState);
+
+
     return true;
 }
+void renderMenu(GameState* gameState) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-//TODO: render is eating the lion's share of the cpu
-bool render(GameState* gameState) {
+    renderText("Press space to start", 10, 10, 32, 32);
+
+    SDL_RenderPresent(renderer);
+}
+
+void renderGame(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
     double pxoffset = gameState->player->getLocation().x - WINLENGTH / 2;
     double pyoffset = gameState->player->getLocation().y - WINHEIGHT / 2;
-
 
     // Draw Player
     DrawCircle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
@@ -200,7 +241,7 @@ bool render(GameState* gameState) {
     renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 110, 12, 12);
     renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
     renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
-    renderText("FPS " + std::to_string(1/gameState->deltaT), 10, 750, 12, 12);
+    renderText("Dt " + std::to_string(gameState->deltaT), 10, 750, 12, 12);
     if (gameState->player->isParked()) {
         renderText("parked = true", 600, 5, 12, 12);
     }
@@ -216,19 +257,14 @@ bool render(GameState* gameState) {
     
 
     SDL_RenderPresent(renderer);
-    return 1;
 }
 
-void renderText(std::string text, int x, int y, int kerning, int FontSize) {// int colorHex, int FontSize) {
+void renderText(std::string text, int x, int y, int kerning, int FontSize) {
     SDL_FRect rect;
     SDL_FRect selectRect;
     rect.x = x; rect.y = y;
     rect.h = FontSize; rect.w = FontSize;
     selectRect.h = 32; selectRect.w = 32;
-
-    //if (!SDL_SetTextureColorMod(letterTexture, (colorHex & 0xFF0000) >> 16, (colorHex & 0x00FF00) >> 8, colorHex & 0x0000FF)) {
-    //    std::cout << "set color failure\n";
-    //}
 
     for (char c : text) {
         int choice = c - 32;
@@ -247,7 +283,4 @@ void renderText(std::string text, int x, int y, int kerning, int FontSize) {// i
         SDL_RenderTexture(renderer, letterTexture, &selectRect, &rect);
         rect.x += kerning;
     }
-    //if (!SDL_SetTextureColorMod(letterTexture, 255, 255, 255)) {
-    //    std::cout << "reset color failure\n";
-    //}
 }
