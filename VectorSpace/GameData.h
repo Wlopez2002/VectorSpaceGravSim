@@ -291,17 +291,17 @@ public:
 			}
 
 			// cap the new speed
-			if (newSpeed.x > 1000) {
-				newSpeed.x = 1000;
+			if (newSpeed.x > 10000) {
+				newSpeed.x = 10000;
 			}
-			if (newSpeed.x < -1000) {
-				newSpeed.x = -1000;
+			if (newSpeed.x < -10000) {
+				newSpeed.x = -10000;
 			}
-			if (newSpeed.y > 1000) {
-				newSpeed.y = 1000;
+			if (newSpeed.y > 10000) {
+				newSpeed.y = 10000;
 			}
-			if (newSpeed.y < -1000) {
-				newSpeed.y = -1000;
+			if (newSpeed.y < -10000) {
+				newSpeed.y = -10000;
 			}
 
 			speed = newSpeed;
