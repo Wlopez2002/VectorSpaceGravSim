@@ -26,6 +26,7 @@ Body* willCollide(GameState* state, Vector2D location);
 Body* closestToPoint(GameState* state, Vector2D location);
 void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* state);
 void randSystemAt(Vector2D location, int seed, GameState* state, double systemRadius);
+void resetGameState(GameState* state);
 double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distance, double maxRadius);
 
 // taylor series approx of Sin and Cos derivative.
@@ -138,7 +139,7 @@ public:
 			Vector2D newSpeed = speed + gravDelta;
 			
 			Vector2D dtSpeed = (newSpeed * state->deltaT);
-			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y)); // https://www.sunshine2k.de/articles/coding/vectorreflection/vectorreflection.html
+			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
 			if (collided != nullptr and collided != this) { // A body was collided with
 				Vector2D n;
 				Vector2D reflection;
@@ -192,9 +193,7 @@ public:
 		health -= dam;
 
 		if (health <= 0) {
-			health = 10;
-			forceLocation(Vector2D(0, 0));
-			state->curState = StageStart;
+			resetGameState(state);
 		}
 		return health;
 	}
@@ -208,6 +207,7 @@ public:
 	double getThrust() { return thrust; }
 	void doBrake() { brake = true; }
 	void unbrake() { brake = false; }
+	void setHealth(int h) { health = h; }
 	void forceLocation(Vector2D newLoc) { location = newLoc; }
 	void incrementThrust(double incr) { 
 		thrust += incr;
@@ -261,7 +261,7 @@ public:
 
 				// Check if the player is to be damaged from the impact;
 				if (!(hitImmunity > 0.0) and relativeSpeed.magnitude() > 400) {
-					damage(newSpeed.magnitude()/300, state);
+					damage((int) newSpeed.magnitude()/300, state);
 					hitImmunity = 1;
 				}
 			}

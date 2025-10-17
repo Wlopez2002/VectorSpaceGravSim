@@ -134,7 +134,7 @@ void randSystemAt(Vector2D location, int seed, GameState* state, double systemRa
 	curWeightMod = rand() % (250 - 10) + 10;
 
 	StaticGravBody* core = new StaticGravBody(location, curRad, curRad * curWeightMod);
-	core->bodyID = state->staticGravBodies.size();
+	core->bodyID = (int) state->staticGravBodies.size();
 	state->staticGravBodies.push_back(core);
 
 	double usedRadius = core->radius + 40;
@@ -161,11 +161,23 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 	curWeightMod = rand() % (15 - 5) + 5;
 	float randomTimeComp = (float)(rand() % (10-1) + 1) / 10;
 
-	DynamicGravBody* bod = new DynamicGravBody(Vector2D(toOrbit->location.x + distance, 0), curRad, curRad * curWeightMod, 1, -3.1415, 3.1415, randomTimeComp, distance, distance);
+	DynamicGravBody* bod = new DynamicGravBody(Vector2D(toOrbit->location.x + (float) distance, 0), curRad, curRad * curWeightMod, 1, -3.1415, 3.1415, randomTimeComp, (float) distance, (float) distance);
 	bod->orbitBody = toOrbit;
-	bod->bodyID = state->dynamicGravBodies.size();
+	bod->bodyID = (int) state->dynamicGravBodies.size();
 	state->dynamicGravBodies.push_back(bod);
 
 	spentDistance = distance + (2 * bod->radius);
 	return spentDistance;
+}
+
+// Resets the given gamestate and loads new bodies.
+// This does not
+void resetGameState(GameState* state) {
+	state->curState = StageStart;
+	state->deltaT = 0;
+	state->player->setHealth(10);
+	state->player->forceLocation(Vector2D(0, 0));
+	state->dynamicGravBodies.clear();
+	state->staticGravBodies.clear();
+	generatePlaySpace(1000, 500, (int) std::time(0), state);
 }
