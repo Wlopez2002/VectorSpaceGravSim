@@ -36,6 +36,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     SDL_SetWindowResizable(window, true);
     WINSCALE = (double)WINLENGTH / 1050.0;
     SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
+
+    SDL_StartTextInput(window);
     
     SDL_Surface* textBMPSurf = SDL_LoadBMP("Resources/font.bmp");
     letterTexture = SDL_CreateTextureFromSurface(renderer, textBMPSurf);
@@ -47,10 +49,14 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 
     GameState* gameState = new GameState;
     gameState->curState = StageStart;
+    gameState->menuSelectorY = 0;
+    gameState->seed = (int)std::time(0);
+    gameState->seedStringBuffer = std::to_string(gameState->seed);
+    gameState->debugMode = false;
     gameState->player = new PlayerShip();
     gameState->player->forceLocation(Vector2D(0, 0));
 
-    generatePlaySpace(1000, 500, std::time(0), gameState);
+    //generatePlaySpace(1000, 500, std::time(0), gameState);
 
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
@@ -79,6 +85,7 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result)
     
 }
 
+
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 {
     GameState* gameState = static_cast<GameState*> (appstate);
@@ -97,8 +104,70 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     switch (gameState->curState)
     {
     case StageStart:
-        if (event->key.key == SDLK_SPACE) {
-            gameState->curState = StagePlay;
+        if (event->type == SDL_EVENT_KEY_DOWN) {
+            if (event->key.key == SDLK_SPACE) {
+                switch (gameState->menuSelectorY)
+                {
+                case 0:
+                    gameState->seed = std::stoi(gameState->seedStringBuffer);
+                    resetGameState(gameState);
+                    gameState->curState = StagePlay;
+                    break;
+                case 1:
+                    break;
+                case 2:
+                    gameState->debugMode = !gameState->debugMode;
+                    break;
+                default:
+                    break;
+                }
+
+            }
+            if (key_board_state[SDL_SCANCODE_W]) {
+                gameState->menuSelectorY--;
+                if (gameState->menuSelectorY < 0) {
+                    gameState->menuSelectorY = 0;
+                }
+            }
+            if (key_board_state[SDL_SCANCODE_S]) {
+                gameState->menuSelectorY++;
+                if (gameState->menuSelectorY > 6) {
+                    gameState->menuSelectorY = 6;
+                }
+            }
+            if (key_board_state[SDL_SCANCODE_BACKSPACE]) {
+                switch (gameState->menuSelectorY)
+                {
+                case 0:
+                    break;
+                case 1:
+                    if (!gameState->seedStringBuffer.empty()) {
+                        gameState->seedStringBuffer.pop_back();
+                    }
+                    break;
+                case 2:
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+        if (event->type == SDL_EVENT_TEXT_INPUT) {
+            char key = *(event->text.text);
+            switch (gameState->menuSelectorY)
+            {
+            case 0:
+                break;
+            case 1:
+                if (key <= 57 and key >= 48) { // the ascii range for numbers
+                    gameState->seedStringBuffer.push_back(key);
+                }
+                break;
+            case 2:
+                break;
+            default:
+                break;
+            }
         }
         break;
     case StagePlay:
@@ -197,12 +266,28 @@ bool update(GameState* gameState) {
 
     return true;
 }
+
+
 void renderMenu(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-    renderText("Press space to start", 10, 10, 32, 32);
+    renderText("Start", 30, 30, 32, 32);
+    renderText("Seed       " + gameState->seedStringBuffer, 30, 100, 20, 20);
+    if (gameState->debugMode) {
+        renderText("Debug Mode true", 30, 140, 20, 20);
+    }
+    else {
+        renderText("Debug Mode false", 30, 140, 20, 20);
+    }
+
+    if (gameState->menuSelectorY == 0) {
+        DrawCircle(renderer, 15, 46, 8);
+    }
+    else {
+        DrawCircle(renderer, 15, 110 + 40 * (gameState->menuSelectorY - 1), 8);
+    }
 
     SDL_RenderPresent(renderer);
 }
@@ -233,26 +318,33 @@ void renderGame(GameState* gameState) {
     }
 
     // Draw UI
-    renderText("Player Location" + gameState->player->getLocation().toString(), 10, 10, 12, 12);
-    renderText("Player Speed   " + gameState->player->getSpeed().toString(), 10, 30, 12, 12);
-    renderText("Gravity Vector " + gameState->player->getGravDelta().toString(), 10, 50, 12, 12);
-    renderText("Movement Vector" + gameState->player->getPlayerDelta().toString(), 10, 70, 12, 12);
-    renderText("Thrust " + std::to_string(gameState->player->getThrust()), 10, 90, 12, 12);
-    renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 110, 12, 12);
-    renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
-    renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
-    renderText("Dt " + std::to_string(gameState->deltaT), 10, 750, 12, 12);
-    if (gameState->player->isParked()) {
-        renderText("parked = true", 600, 5, 12, 12);
+    if (gameState->debugMode) {
+        renderText("Player Location" + gameState->player->getLocation().toString(), 10, 10, 12, 12);
+        renderText("Player Speed   " + gameState->player->getSpeed().toString(), 10, 30, 12, 12);
+        renderText("Gravity Vector " + gameState->player->getGravDelta().toString(), 10, 50, 12, 12);
+        renderText("Movement Vector" + gameState->player->getPlayerDelta().toString(), 10, 70, 12, 12);
+        renderText("Thrust " + std::to_string(gameState->player->getThrust()), 10, 90, 12, 12);
+        renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 110, 12, 12);
+        renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
+        renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
+        renderText("Dt " + std::to_string(gameState->deltaT), 10, 750, 12, 12);
+        if (gameState->player->isParked()) {
+            renderText("parked = true", 600, 5, 12, 12);
+        }
+        else {
+            renderText("parked = false", 600, 5, 12, 12);
+        }
+        if (gameState->player->isParked()) {
+            renderText("moving = true", 600, 40, 12, 12);
+        }
+        else {
+            renderText("moving = false", 600, 40, 12, 12);
+        }
     }
     else {
-        renderText("parked = false", 600, 5, 12, 12);
-    }
-    if (gameState->player->isParked()) {
-        renderText("moving = true", 600, 40, 12, 12);
-    }
-    else {
-        renderText("moving = false", 600, 40, 12, 12);
+        renderText("Location " + gameState->player->getLocation().toString(), 10, 10, 12, 12);
+        renderText("Thrust   " + std::to_string(gameState->player->getThrust()), 10, 30, 12, 12);
+        renderText("Health   " + std::to_string(gameState->player->getHealth()), 10, 50, 12, 12);
     }
     
 

@@ -177,7 +177,13 @@ void resetGameState(GameState* state) {
 	state->deltaT = 0;
 	state->player->setHealth(10);
 	state->player->forceLocation(Vector2D(0, 0));
+	for (auto body : state->staticGravBodies) {
+		delete(body);
+	}
+	for (auto body : state->dynamicGravBodies) {
+		delete(body);
+	}
 	state->dynamicGravBodies.clear();
 	state->staticGravBodies.clear();
-	generatePlaySpace(1000, 500, (int) std::time(0), state);
+	generatePlaySpace(1000, 500, state->seed, state);
 }

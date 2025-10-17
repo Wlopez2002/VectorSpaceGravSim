@@ -39,8 +39,12 @@ enum Stage {StageStart, StagePlay};
 // This structure contains all data needed to run the game
 struct GameState {
 	Stage curState;
+	int menuSelectorY;
+	int seed;
+	bool debugMode;
 	double deltaT;
 	PlayerShip* player;
+	std::string seedStringBuffer;
 	std::vector<StaticGravBody*> staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies;
 };
@@ -49,10 +53,10 @@ struct GameState {
 class Body {
 public:
 	Vector2D speed = Vector2D(0, 0);
-	Vector2D location;
-	double radius;
-	double mass;
-	int bodyID;
+	Vector2D location = Vector2D(0, 0);
+	double radius = 0;
+	double mass = 0;
+	int bodyID = -1;
 };
 
 // This class is for bodies that need to move.
