@@ -52,7 +52,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->menuSelectorY = 0;
     gameState->seed = (int)std::time(0);
     gameState->seedStringBuffer = std::to_string(gameState->seed);
-    gameState->debugMode = false;
+    gameState->debugMode = true;
     gameState->player = new PlayerShip();
     gameState->player->forceLocation(Vector2D(0, 0));
 
@@ -62,7 +62,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     DTNOW = SDL_GetPerformanceCounter();
 
     (*appstate) = gameState;
-
     return SDL_APP_CONTINUE;
 }
 
@@ -95,7 +94,6 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     }
     if (event->type == SDL_EVENT_WINDOW_RESIZED) {
         SDL_GetWindowSize(window, &WINLENGTH, &WINHEIGHT);
-        //WINSCALE = (double)WINLENGTH / 1050.0;
         SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
     }
 
@@ -131,8 +129,8 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
             }
             if (key_board_state[SDL_SCANCODE_S]) {
                 gameState->menuSelectorY++;
-                if (gameState->menuSelectorY > 6) {
-                    gameState->menuSelectorY = 6;
+                if (gameState->menuSelectorY > 2) {
+                    gameState->menuSelectorY = 2;
                 }
             }
             if (key_board_state[SDL_SCANCODE_BACKSPACE]) {
@@ -159,7 +157,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
             case 0:
                 break;
             case 1:
-                if (key <= 57 and key >= 48) { // the ascii range for numbers
+                if (key <= 57 and key >= 48 and gameState->seedStringBuffer.length() < 9) { // the ascii range for numbers and limit the length
                     gameState->seedStringBuffer.push_back(key);
                 }
                 break;
@@ -172,10 +170,12 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         break;
     case StagePlay:
         if (key_board_state[SDL_SCANCODE_Q]) {
-            gameState->player->incrementThrust(-12 * gameState->deltaT);
+            gameState->player->setThrustDir(-1); // TODO: this needs to tell a flag in update to increment thrust
+        } else if (key_board_state[SDL_SCANCODE_E]) {
+            gameState->player->setThrustDir(1);
         }
-        if (key_board_state[SDL_SCANCODE_E]) {
-            gameState->player->incrementThrust(12 * gameState->deltaT);
+        else {
+            gameState->player->setThrustDir(0);
         }
         if (key_board_state[SDL_SCANCODE_W]) {
             moveVect = moveVect + Vector2D(0, -pMoveSpeed);
@@ -224,6 +224,13 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 SDL_AppResult SDL_AppIterate(void* appstate)
 {
     GameState* gameState = static_cast<GameState*> (appstate);
+
+
+    //Calculate deltaT
+    DTLAST = DTNOW;
+    DTNOW = SDL_GetPerformanceCounter();
+    gameState->deltaT = ((DTNOW - DTLAST) / (float)SDL_GetPerformanceFrequency());
+
     if (!update(gameState)) {
         return SDL_APP_SUCCESS;
     }
@@ -238,17 +245,12 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     default:
         break;
     }
-    
 
+    //SDL_Delay(floor(16.666f - gameState->deltaT));
     return SDL_APP_CONTINUE;
 }
 
 bool update(GameState* gameState) {
-    // Calculate deltaT
-    DTLAST = DTNOW;
-    DTNOW = SDL_GetPerformanceCounter();
-    gameState->deltaT = ((double)((DTNOW - DTLAST) * 1000 / (double)SDL_GetPerformanceFrequency())) * 0.001;
-
     switch (gameState->curState)
     {
     case StageStart:

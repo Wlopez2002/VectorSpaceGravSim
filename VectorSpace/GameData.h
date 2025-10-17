@@ -42,7 +42,7 @@ struct GameState {
 	int menuSelectorY;
 	int seed;
 	bool debugMode;
-	double deltaT;
+	float deltaT;
 	PlayerShip* player;
 	std::string seedStringBuffer;
 	std::vector<StaticGravBody*> staticGravBodies;
@@ -180,6 +180,7 @@ public:
 class PlayerShip {
 private:
 	int health = 10;
+	int thrustDir = 0;
 	Vector2D location;
 	Vector2D speed;
 	Vector2D gravDelta;
@@ -188,7 +189,7 @@ private:
 	bool moving = false;
 	bool parked = false;
 	double hitImmunity = 0;
-	double thrust = 1.0;
+	double thrust = 1000.0;
 	Body* parkedOn = nullptr;
 	Vector2D parkedDifference;
 	Body* lastCollided = nullptr;
@@ -209,14 +210,15 @@ public:
 	bool isMoving() { return moving; }
 	bool isParked() { return parked; }
 	double getThrust() { return thrust; }
+	void setThrustDir(int thr) { thrustDir = thr; }
 	void doBrake() { brake = true; }
 	void unbrake() { brake = false; }
 	void setHealth(int h) { health = h; }
 	void forceLocation(Vector2D newLoc) { location = newLoc; }
 	void incrementThrust(double incr) { 
 		thrust += incr;
-		if (thrust > 6) {
-			thrust = 6;
+		if (thrust > 4000) {
+			thrust = 4000;
 		}
 		if (thrust < 0) {
 			thrust = 0;
@@ -233,6 +235,9 @@ public:
 
 	}
 	void update(GameState* state) {
+
+		incrementThrust(thrustDir * 500 * state->deltaT);
+
 		if (moving) {
 			parked = false;
 		}
@@ -240,9 +245,9 @@ public:
 			gravDelta = doGravity(state, location);
 			Vector2D newSpeed = speed;
 			if (!brake) {
-				newSpeed = newSpeed + playerDelta;
+				newSpeed = newSpeed + (playerDelta * state->deltaT);
 			}
-			newSpeed = newSpeed + gravDelta;
+			newSpeed = newSpeed + (gravDelta * state->deltaT);
 
 			// decrements if the player is hit immune
 			if (hitImmunity > 0.0) {
@@ -306,12 +311,12 @@ public:
 		if (brake and !parked) {
 			// getting the closest body to match speed.
 			Body* closest = closestToPoint(state, location);
-
 			Vector2D speedDiff = closest->speed - speed;
 			if (closest != nullptr and speedDiff.magnitude() != 0) {
-				speed = speed + speedDiff * (0.5 / speedDiff.magnitude());
+				speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * thrust * state->deltaT;
 			} else {
-				speed = speed * 0.9999;
+				speedDiff = speed * -1;
+				speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * thrust * state->deltaT;
 			}
 		}
 
