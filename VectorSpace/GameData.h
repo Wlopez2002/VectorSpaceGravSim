@@ -15,7 +15,7 @@ class DynamicGravBody;
 class StaticGravBody;
 class PlayerShip;
 
-static const double GCONST = 2.0; // Gravity constant
+static const double GCONST = 2000.0; // Gravity constant
 static const double AREASIZE = 8000; // the size of an area
 
 // See GameData.cpp for descriptions.
