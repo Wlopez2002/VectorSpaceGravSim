@@ -137,7 +137,7 @@ void randSystemAt(Vector2D location, int seed, GameState* state, double systemRa
 	core->bodyID = (int) state->staticGravBodies.size();
 	state->staticGravBodies.push_back(core);
 
-	double usedRadius = core->radius + 40;
+	double usedRadius = core->radius + 60;
 	int maxPlanets = rand() % 10;
 	double spacePerPlanet = (systemRadius - usedRadius) / maxPlanets;
 	double maxRad = spacePerPlanet / 2;
@@ -175,8 +175,7 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 void resetGameState(GameState* state) {
 	state->curState = StageStart;
 	state->deltaT = 0;
-	state->player->setHealth(10);
-	state->player->forceLocation(Vector2D(0, 0));
+	state->player->resetPlayer();
 	for (auto body : state->staticGravBodies) {
 		delete(body);
 	}

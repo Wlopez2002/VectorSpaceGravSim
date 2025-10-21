@@ -13,6 +13,7 @@ struct GameState;
 class Body;
 class DynamicGravBody;
 class StaticGravBody;
+class NavigationObject;
 class PlayerShip;
 
 static const double GCONST = 2000.0; // Gravity constant
@@ -44,6 +45,7 @@ struct GameState {
 	bool debugMode;
 	float deltaT;
 	PlayerShip* player;
+	NavigationObject* tempNavShip;
 	std::string seedStringBuffer;
 	std::vector<StaticGravBody*> staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies;
@@ -165,6 +167,7 @@ public:
 	}
 };
 
+
 // The class for a static bodies that do not move.
 class StaticGravBody : public Body {
 public:
@@ -175,16 +178,15 @@ public:
 	}
 };
 
-
 // The class representing the player and their ship.
 class PlayerShip {
 private:
 	int health = 10;
 	int thrustDir = 0;
-	Vector2D location;
-	Vector2D speed;
-	Vector2D gravDelta;
-	Vector2D playerDelta;
+	Vector2D location = Vector2D(0, 0);
+	Vector2D speed = Vector2D(0, 0);
+	Vector2D gravDelta = Vector2D(0, 0);
+	Vector2D playerDelta = Vector2D(0, 0);
 	bool brake = false;
 	bool moving = false;
 	bool parked = false;
@@ -215,6 +217,12 @@ public:
 	void unbrake() { brake = false; }
 	void setHealth(int h) { health = h; }
 	void forceLocation(Vector2D newLoc) { location = newLoc; }
+	void resetPlayer() {
+		setHealth(10);
+		forceLocation(Vector2D(0, 0));
+		speed = Vector2D(0, 0);
+		thrust = 1000.0;
+	}
 	void incrementThrust(double incr) { 
 		thrust += incr;
 		if (thrust > 4000) {
@@ -345,5 +353,134 @@ public:
 		}
 	}
 
+};
+
+// TODO: this class is being experimented with and is subject to frequent changes
+// The class represting things that navigate the a world of bodies.
+class NavigationObject {
+private:
+	Vector2D location = Vector2D(0, 0);
+	Vector2D destination = Vector2D(0, 0);
+	Vector2D start = location;
+	Vector2D currentDest = destination;
+	Vector2D speed = Vector2D(0, 0);
+public:
+	Body* closestBody = nullptr;
+	Vector2D getLocation() { return location; }
+	Vector2D getD() { return destination; }
+	Vector2D getCD() { return currentDest; }
+	void forceLocation(Vector2D newLoc) { location = newLoc; }
+	void setDestination(Vector2D dest) { destination = dest; }
+	void avoidBodies(GameState* state) {
+		// Body Avoidance
+		// draw a line from location to destination. if a body intersects the line add a vertex away from it as a temp destination
+		// check to see if a body intersects by projecting the distance and seeing if that point is within the body radius
+		/*
+					Body
+				   /  '
+		dVect ->  /   '
+				 /    ' <- C -> B (distB)
+				/     '
+			   /	  '
+			  A ------------------ B <- line from location to destination (lineVect)
+			  A ----- C <- projection of A -> Body onto A -> B (lineVecrProj)
+		*/
+		currentDest = destination;
+		double closestDist = -1;
+		closestBody = nullptr;
+		
+		Vector2D lineVect = destination - location;
+		Vector2D closestCBody;
+		bool closestBehind = false;
+		for (auto body : state->staticGravBodies) {
+			Vector2D dVect = body->location - location;
+			Vector2D lineVecrProj;
+			lineVecrProj = dVect.proj(lineVect);
+			Vector2D C = lineVecrProj + location; // the location of C
+			double distB = (body->location - C).magnitude();
+
+			// This method will concider bodies that are "Behind the body" thus those need to be passed over
+			// A body is in front if lineVecrProj and lineVect have the same normal (or the same signs for x and y)
+			if (std::signbit(lineVecrProj.x) != std::signbit(lineVect.x) and std::signbit(lineVecrProj.y) != std::signbit(lineVect.y)){
+				continue;
+			}
+			// We also should not concider bodies that are further than B
+			if (lineVecrProj.magnitude() > lineVect.magnitude()) {
+				continue;
+			}
+			if (distB <= body->radius + 10) {
+				if (closestDist == -1 or lineVecrProj.magnitude() < closestDist) {
+					closestDist = lineVecrProj.magnitude();
+					closestBody = body;
+					closestCBody = (body->location - C);
+					
+				}
+			}
+		}
+		for (auto body : state->dynamicGravBodies) { // The exact same code as above
+			Vector2D dVect = body->location - location;
+			Vector2D lineVecrProj;
+			lineVecrProj = dVect.proj(lineVect);
+			Vector2D C = lineVecrProj + location;
+			double distB = (body->location - C).magnitude();
+			if (std::signbit(lineVecrProj.x) != std::signbit(lineVect.x) and std::signbit(lineVecrProj.y) != std::signbit(lineVect.y)) {
+				continue;
+			}
+			if (lineVecrProj.magnitude() > lineVect.magnitude()) {
+				continue;
+			}
+			if (distB <= body->radius + 10) {
+				if (closestDist == -1 or lineVecrProj.magnitude() < closestDist) {
+					closestDist = lineVecrProj.magnitude();
+					closestBody = body;
+					closestCBody = (body->location - C);
+				}
+			}
+		}
+		if (closestBody != nullptr) {
+			if (closestCBody == Vector2D(0, 0)) {
+				Vector2D avoidVect = (closestBody->location - location).normalize();
+				avoidVect = Vector2D(-avoidVect.y, avoidVect.x);
+				avoidVect = avoidVect * -(closestBody->radius + 60);
+				currentDest = closestBody->location + avoidVect;
+			}
+			else {
+				currentDest = closestBody->location + (closestCBody.normalize() * -(closestBody->radius + 60));
+			}
+		}
+	}
+	void update(GameState* state) {
+		Vector2D newSpeed = speed;
+		//calculate the speed impacted by gravity
+		//newSpeed = newSpeed + (doGravity(state, location) * state->deltaT);
+
+		//return to start
+		if ((destination - location).magnitude() < 18) {
+			Vector2D temp = start;
+			start = destination;
+			destination = temp;
+		}
+
+		avoidBodies(state);
+
+		newSpeed = (currentDest - location).normalize() * 500;
+		
+		// collision
+		//Vector2D dtSpeed = (newSpeed * state->deltaT);
+		//Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
+		//if (collided != nullptr) { // A body was collided with
+		//	Vector2D n;
+		//	Vector2D relativeSpeed = newSpeed - collided->speed;
+		//	n = location - collided->location;
+		//	n = n * (1 / n.magnitude());
+		//	newSpeed = newSpeed * 0.75; // a little friction
+		//	double impulse = relativeSpeed.dot(n) * -(1.5);
+		//	newSpeed = newSpeed + (n * impulse);
+		//}
+
+		speed = newSpeed;
+		// change location by speed
+		location = location + (speed * state->deltaT);
+	}
 };
 

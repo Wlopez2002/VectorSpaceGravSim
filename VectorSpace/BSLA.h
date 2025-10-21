@@ -46,6 +46,15 @@ public:
 	double magnitude() {
 		return sqrt(abs(x * x) + abs(y * y));
 	}
+	Vector2D normalize() {
+
+		return Vector2D(x,y) * (1 / Vector2D(x, y).magnitude());
+	}
+	Vector2D proj(Vector2D a) { // project this vector onto a
+		Vector2D b = Vector2D(x, y);
+		double osqr = a.magnitude() * a.magnitude();
+		return a * (a.dot(b) * (1/ osqr));
+	}
 	std::string toString() {
 		return "[" + std::to_string(x) + " " + std::to_string(y) + "]";
 	}

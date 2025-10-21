@@ -7,4 +7,6 @@
 #include <SDL3_image/SDL_image.h>
 #include <iostream>
 
-void DrawCircle(SDL_Renderer* renderer, float cx, float cy, float r);
+void drawCircle(SDL_Renderer* renderer, float cx, float cy, float r);
+
+void drawTiltedSquare(SDL_Renderer* renderer, float cx, float cy, float r);
