@@ -50,7 +50,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     GameState* gameState = new GameState;
     gameState->curState = StageStart;
     gameState->menuSelectorY = 0;
-    gameState->seed = (int)std::time(0);
+    gameState->seed = ((int)std::time(0)) % 9999999;
     gameState->seedStringBuffer = std::to_string(gameState->seed);
     gameState->debugMode = false;
     gameState->player = new PlayerShip();
@@ -282,7 +282,13 @@ void renderMenu(GameState* gameState) {
     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
     renderText("Start", 30, 30, 32, 32);
-    renderText("Seed       " + gameState->seedStringBuffer, 30, 100, 20, 20);
+    renderText("Press space to select", 600, 14, 16, 16);
+    if (gameState->menuSelectorY == 1) {
+        renderText("Seed       " + gameState->seedStringBuffer + "_", 30, 100, 20, 20);
+    }
+    else {
+        renderText("Seed       " + gameState->seedStringBuffer, 30, 100, 20, 20);
+    }
     if (gameState->debugMode) {
         renderText("Debug Mode true", 30, 140, 20, 20);
     }
