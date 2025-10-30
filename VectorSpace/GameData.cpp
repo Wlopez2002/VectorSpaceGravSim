@@ -182,7 +182,26 @@ void resetGameState(GameState* state) {
 	for (auto body : state->dynamicGravBodies) {
 		delete(body);
 	}
+	for (auto navObj : state->navigationObjects) {
+		delete(navObj);
+	}
 	state->dynamicGravBodies.clear();
 	state->staticGravBodies.clear();
+	state->navigationObjects.clear();
 	generatePlaySpace(1000, 500, state->seed, state);
+
+	for (int i = 0; i < 20; i++) {
+		NavigationObject* newNavObj = new NavigationObject;
+		newNavObj->forceLocation(Vector2D(0, 0));
+
+		int randIndex = rand() % (state->staticGravBodies.size() - 1);
+		StaticGravBody* bod = state->staticGravBodies.at(randIndex);
+		Vector2D pVect = Vector2D(rand(), rand());
+		pVect = pVect.normalize();
+		pVect = pVect * (bod->radius + 100);
+		pVect = pVect + bod->location;
+		newNavObj->setDestination(pVect);
+
+		state->navigationObjects.push_back(newNavObj);
+	}
 }

@@ -45,10 +45,10 @@ struct GameState {
 	bool debugMode;
 	float deltaT;
 	PlayerShip* player;
-	NavigationObject* tempNavShip;
 	std::string seedStringBuffer;
 	std::vector<StaticGravBody*> staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies;
+	std::vector<NavigationObject*> navigationObjects;
 };
 
 // The base parent class for physical bodies, represents planets, suns, etc.
@@ -341,15 +341,19 @@ public:
 		// Stop the player of they would go over the AREASIZE
 		if (location.x < -AREASIZE) {
 			location.x = -AREASIZE;
+			speed.x = 0;
 		}
 		if (location.x > AREASIZE) {
 			location.x = AREASIZE;
+			speed.x = 0;
 		}
 		if (location.y < -AREASIZE) {
 			location.y = -AREASIZE;
+			speed.y = 0;
 		}
 		if (location.y > AREASIZE) {
 			location.y = AREASIZE;
+			speed.y = 0;
 		}
 	}
 
@@ -455,25 +459,35 @@ public:
 		* but I feel they are reasonable.
 		*/
 		Vector2D newSpeed = speed;
-		newSpeed = newSpeed + (doGravity(state, location) * state->deltaT);
+		//newSpeed = newSpeed + (doGravity(state, location) * state->deltaT);
 
-		//return to start
+		// Temporary testing code just to see the object move
+		// get a random body to use for a new destination
 		if ((destination - location).magnitude() < 18) {
-			Vector2D temp = start;
+			int randIndex = rand() % (state->staticGravBodies.size() - 1);
+			StaticGravBody* bod = state->staticGravBodies.at(randIndex);
+			Vector2D pVect = Vector2D(rand(), rand());
+			pVect = pVect.normalize();
+			pVect = pVect * (bod->radius + 100);
+			pVect = pVect + bod->location;
+
 			start = destination;
-			destination = temp;
+			destination = pVect;
 		}
 
+		// Run the avoid bodies function to get the current destination
 		avoidBodies(state);
 
 		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D locationAsIs = location + (newSpeed * state->deltaT);
-		Vector2D locationWithImpulse = location + ((newSpeed + (currentDest - location).normalize()) * 500 * state->deltaT);
-		if ((currentDest - locationWithImpulse).magnitude() > (currentDest - locationAsIs).magnitude()) {
-			newSpeed = newSpeed + (currentDest - location).normalize() * 500;
+		Vector2D speedWithImpulse = newSpeed + (currentDest - location).normalize() * 500;
+		Vector2D locationWithImpulse = location + (speedWithImpulse * state->deltaT);
+		if ((currentDest - locationWithImpulse).magnitude() < (currentDest - locationAsIs).magnitude()) {
+			newSpeed = speedWithImpulse;
 		}
 		
-
+		std::cout << "\n";
+		
 		// cap the new speed
 		if (newSpeed.x > 500) {
 			newSpeed.x = 500;
@@ -499,12 +513,28 @@ public:
 			newSpeed = newSpeed * 0.75; // a little friction
 			double impulse = relativeSpeed.dot(n) * -(1.5);
 			newSpeed = newSpeed + (n * impulse);
-			std::cout << "impact\n";
 		}
 
 		speed = newSpeed;
 		// change location by speed
 		location = location + (speed * state->deltaT);
+
+		if (location.x < -AREASIZE) {
+			location.x = -AREASIZE;
+			speed.x = 0;
+		}
+		if (location.x > AREASIZE) {
+			location.x = AREASIZE;
+			speed.x = 0;
+		}
+		if (location.y < -AREASIZE) {
+			location.y = -AREASIZE;
+			speed.y = 0;
+		}
+		if (location.y > AREASIZE) {
+			location.y = AREASIZE;
+			speed.y = 0;
+		}
 	}
 };
 

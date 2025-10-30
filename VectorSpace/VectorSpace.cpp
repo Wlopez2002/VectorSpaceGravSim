@@ -55,12 +55,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->debugMode = true;
     gameState->player = new PlayerShip();
 
-    // TODO: this is for testing the NavigationObject class
-    gameState->tempNavShip = new NavigationObject;
-    gameState->tempNavShip->forceLocation(Vector2D(0, 0));
-    gameState->tempNavShip->setDestination(Vector2D(1000, 1200));
-
-
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
 
@@ -77,10 +71,13 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result)
     for (auto body : gameState->dynamicGravBodies) {
         delete(body);
     }
+    for (auto navObj : gameState->navigationObjects) {
+        delete(navObj);
+    }
     gameState->staticGravBodies.clear();
     gameState->dynamicGravBodies.clear();
+    gameState->navigationObjects.clear();
     delete(gameState->player);
-    delete(gameState->tempNavShip);
     delete(gameState);
 
     SDL_DestroyRenderer(renderer);
@@ -263,9 +260,10 @@ bool update(GameState* gameState) {
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
         }
+        for (auto navObj : gameState->navigationObjects) {
+            navObj->update(gameState);
+        }
         gameState->player->update(gameState);
-
-        gameState->tempNavShip->update(gameState); //TODO: remove later
         break;
     default:
         break;
@@ -317,30 +315,30 @@ void renderGame(GameState* gameState) {
     // Draw Player
     drawCircle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
 
-    //TODO: remove later
-    drawTiltedSquare(renderer, gameState->tempNavShip->getLocation().x - pxoffset, gameState->tempNavShip->getLocation().y - pyoffset, 10);
-
-    if (gameState->debugMode) {
-        SDL_RenderLine(renderer, gameState->tempNavShip->getLocation().x - pxoffset, gameState->tempNavShip->getLocation().y - pyoffset,
-            gameState->tempNavShip->getD().x - pxoffset, gameState->tempNavShip->getD().y - pyoffset);
-        SDL_RenderLine(renderer, gameState->tempNavShip->getLocation().x - pxoffset, gameState->tempNavShip->getLocation().y - pyoffset,
-            gameState->tempNavShip->getCD().x - pxoffset, gameState->tempNavShip->getCD().y - pyoffset);
-        if (gameState->tempNavShip->closestBody != nullptr) {
-            Vector2D dVect = gameState->tempNavShip->closestBody->location - gameState->tempNavShip->getLocation();
-            Vector2D lineVect = gameState->tempNavShip->getD() - gameState->tempNavShip->getLocation();
-            Vector2D lineVecrProj;
-            lineVecrProj = dVect.proj(lineVect);
-            SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0, 0);
-            SDL_RenderLine(renderer, gameState->tempNavShip->getLocation().x - pxoffset, gameState->tempNavShip->getLocation().y - pyoffset,
-                gameState->tempNavShip->getLocation().x + dVect.x - pxoffset, gameState->tempNavShip->getLocation().y + dVect.y - pyoffset);
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0xFF, 0);
-            SDL_RenderLine(renderer, gameState->tempNavShip->getLocation().x - pxoffset, gameState->tempNavShip->getLocation().y - pyoffset,
-                gameState->tempNavShip->getLocation().x + lineVect.x - pxoffset, gameState->tempNavShip->getLocation().y + lineVect.y - pyoffset);
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
-            SDL_RenderLine(renderer, gameState->tempNavShip->getLocation().x - pxoffset, gameState->tempNavShip->getLocation().y - pyoffset,
-                gameState->tempNavShip->getLocation().x + lineVecrProj.x - pxoffset, gameState->tempNavShip->getLocation().y + lineVecrProj.y - pyoffset);
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-            //std::cout << lineVecrProj.normalize().toString() << " " << lineVect.normalize().toString() << "\n";
+    // Draw navigation objects
+    for (auto navObj : gameState->navigationObjects) {
+        drawTiltedSquare(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
+        if (gameState->debugMode) {
+            SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                navObj->getD().x - pxoffset, navObj->getD().y - pyoffset);
+            SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                navObj->getCD().x - pxoffset, navObj->getCD().y - pyoffset);
+            if (navObj->closestBody != nullptr) {
+                Vector2D dVect = navObj->closestBody->location - navObj->getLocation();
+                Vector2D lineVect = navObj->getD() - navObj->getLocation();
+                Vector2D lineVecrProj;
+                lineVecrProj = dVect.proj(lineVect);
+                SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0, 0);
+                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                    navObj->getLocation().x + dVect.x - pxoffset, navObj->getLocation().y + dVect.y - pyoffset);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0xFF, 0);
+                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                    navObj->getLocation().x + lineVect.x - pxoffset, navObj->getLocation().y + lineVect.y - pyoffset);
+                SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
+                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                    navObj->getLocation().x + lineVecrProj.x - pxoffset, navObj->getLocation().y + lineVecrProj.y - pyoffset);
+                SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+            }
         }
     }
 
