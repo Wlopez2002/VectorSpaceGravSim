@@ -450,9 +450,12 @@ public:
 		}
 	}
 	void update(GameState* state) {
+		/*
+		* The current avoidance and speed system is not perfect, some collisions still happen
+		* but I feel they are reasonable.
+		*/
 		Vector2D newSpeed = speed;
-		//calculate the speed impacted by gravity
-		//newSpeed = newSpeed + (doGravity(state, location) * state->deltaT);
+		newSpeed = newSpeed + (doGravity(state, location) * state->deltaT);
 
 		//return to start
 		if ((destination - location).magnitude() < 18) {
@@ -463,20 +466,41 @@ public:
 
 		avoidBodies(state);
 
-		newSpeed = (currentDest - location).normalize() * 500;
+		// if the current speed gets close to currentDest do not add an impulse to speed
+		Vector2D locationAsIs = location + (newSpeed * state->deltaT);
+		Vector2D locationWithImpulse = location + ((newSpeed + (currentDest - location).normalize()) * 500 * state->deltaT);
+		if ((currentDest - locationWithImpulse).magnitude() > (currentDest - locationAsIs).magnitude()) {
+			newSpeed = newSpeed + (currentDest - location).normalize() * 500;
+		}
+		
+
+		// cap the new speed
+		if (newSpeed.x > 500) {
+			newSpeed.x = 500;
+		}
+		if (newSpeed.x < -500) {
+			newSpeed.x = -500;
+		}
+		if (newSpeed.y > 500) {
+			newSpeed.y = 500;
+		}
+		if (newSpeed.y < -500) {
+			newSpeed.y = -500;
+		}
 		
 		// collision
-		//Vector2D dtSpeed = (newSpeed * state->deltaT);
-		//Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
-		//if (collided != nullptr) { // A body was collided with
-		//	Vector2D n;
-		//	Vector2D relativeSpeed = newSpeed - collided->speed;
-		//	n = location - collided->location;
-		//	n = n * (1 / n.magnitude());
-		//	newSpeed = newSpeed * 0.75; // a little friction
-		//	double impulse = relativeSpeed.dot(n) * -(1.5);
-		//	newSpeed = newSpeed + (n * impulse);
-		//}
+		Vector2D dtSpeed = (newSpeed * state->deltaT);
+		Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
+		if (collided != nullptr) { // A body was collided with
+			Vector2D n;
+			Vector2D relativeSpeed = newSpeed - collided->speed;
+			n = location - collided->location;
+			n = n * (1 / n.magnitude());
+			newSpeed = newSpeed * 0.75; // a little friction
+			double impulse = relativeSpeed.dot(n) * -(1.5);
+			newSpeed = newSpeed + (n * impulse);
+			std::cout << "impact\n";
+		}
 
 		speed = newSpeed;
 		// change location by speed

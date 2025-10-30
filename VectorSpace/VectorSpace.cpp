@@ -52,7 +52,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->menuSelectorY = 0;
     gameState->seed = ((int)std::time(0)) % 9999999;
     gameState->seedStringBuffer = std::to_string(gameState->seed);
-    gameState->debugMode = false;
+    gameState->debugMode = true;
     gameState->player = new PlayerShip();
 
     // TODO: this is for testing the NavigationObject class
