@@ -484,10 +484,29 @@ public:
 		Vector2D locationWithImpulse = location + (speedWithImpulse * state->deltaT);
 		if ((currentDest - locationWithImpulse).magnitude() < (currentDest - locationAsIs).magnitude()) {
 			newSpeed = speedWithImpulse;
+
+			// The limit is to prevent zigzagging
+			if (abs(newSpeed.x) < 100) {
+				newSpeed.x = 0;
+			}
+			if (abs(newSpeed.y) < 100) {
+				newSpeed.y = 0;
+			}
 		}
 		
-		std::cout << "\n";
-		
+		// collision
+		// TODO: there is some bug where the collision forces the nav object inside a body
+		//Vector2D dtSpeed = (newSpeed * state->deltaT);
+		//Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
+		//if (collided != nullptr) { // A body was collided with
+		//	Vector2D n;
+		//	Vector2D relativeSpeed = newSpeed - collided->speed;
+		//	n = location - collided->location;
+		//	n = n * (1 / n.magnitude());
+		//	double impulse = relativeSpeed.dot(n) * -(1.5);
+		//	newSpeed = newSpeed + (n * impulse);
+		//}
+
 		// cap the new speed
 		if (newSpeed.x > 500) {
 			newSpeed.x = 500;
@@ -500,19 +519,6 @@ public:
 		}
 		if (newSpeed.y < -500) {
 			newSpeed.y = -500;
-		}
-		
-		// collision
-		Vector2D dtSpeed = (newSpeed * state->deltaT);
-		Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
-		if (collided != nullptr) { // A body was collided with
-			Vector2D n;
-			Vector2D relativeSpeed = newSpeed - collided->speed;
-			n = location - collided->location;
-			n = n * (1 / n.magnitude());
-			newSpeed = newSpeed * 0.75; // a little friction
-			double impulse = relativeSpeed.dot(n) * -(1.5);
-			newSpeed = newSpeed + (n * impulse);
 		}
 
 		speed = newSpeed;

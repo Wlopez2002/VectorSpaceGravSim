@@ -190,7 +190,7 @@ void resetGameState(GameState* state) {
 	state->navigationObjects.clear();
 	generatePlaySpace(1000, 500, state->seed, state);
 
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 10; i++) {
 		NavigationObject* newNavObj = new NavigationObject;
 		newNavObj->forceLocation(Vector2D(0, 0));
 
