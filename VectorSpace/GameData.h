@@ -51,7 +51,7 @@ struct GameState {
 	std::string seedStringBuffer;
 	std::vector<StaticGravBody*> staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies;
-	std::vector<Entity*> Entities;
+	std::vector<Entity*> entities;
 	std::vector<City*> cities;
 };
 
@@ -185,29 +185,32 @@ public:
 
 class City {
 private:
-	int pcPS = 1; // produce or consume per second
-	int storageLimit = 100;
-	int currentStorage = 0;
+	float pcPS = 1; // produce or consume per second
+	float storageLimit = 100;
+	float currentStorage = 0;
 	int cityID = -1;
 	Body* tiedBody = nullptr;
 public:
-	City(int pcps, int sl, int id, Body* tb) {
+	City(float pcps, int sl, int id, Body* tb) {
 		pcPS = pcps;
 		storageLimit = sl;
 		tiedBody = tb;
 		cityID = id;
 	}
+	float getpcPS() { return pcPS; }
+	float getStorageLimit() { return storageLimit; }
+	float getCurStorage() { return currentStorage; }
 	int getID() { return cityID; }
 	Body* getTiedBody() { return tiedBody; }
-	int transfer(int requested) {
+	float transfer(float requested) {
 		if (requested >= currentStorage) {
 
 		}
 		currentStorage -= requested;
 		return requested;
 	}
-	void update() {
-		currentStorage += pcPS;
+	void update(GameState* state) {
+		currentStorage += pcPS * state->deltaT;
 		if (currentStorage > storageLimit) {
 			currentStorage = storageLimit;
 		}

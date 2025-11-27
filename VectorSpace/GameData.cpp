@@ -121,9 +121,10 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 			randSystemAt(Vector2D(x,y), seed++, state, systemRad);
 		}
 	}
-	std::cout << "created " << (int)state->staticGravBodies.size() + (int)state->dynamicGravBodies.size() + 2 << " bodies\n";
+	int bodyCount = (int)state->staticGravBodies.size() + (int)state->dynamicGravBodies.size();
+	std::cout << "created " << bodyCount << " bodies\n";
 
-	for (int i = 0; i < 300; i++) {
+	for (int i = 0; i < bodyCount/2; i++) {
 		Body* tiedBody;
 		tiedBody = (state->dynamicGravBodies.at(rand() % state->dynamicGravBodies.size()));
 		int newID = (int)state->cities.size();
@@ -137,12 +138,12 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 
 		if (!cityFail) {
 			if (i % 2 == 0) {
-				City* newCity = new City(true, 1, newID, tiedBody);
+				City* newCity = new City(1, 1000, newID, tiedBody);
 				state->cities.push_back(newCity);
 
 			}
 			else {
-				City* newCity = new City(true, 1, newID, tiedBody);
+				City* newCity = new City(-1, 1000, newID, tiedBody);
 				state->cities.push_back(newCity);
 			}
 		}
@@ -211,7 +212,7 @@ void resetGameState(GameState* state) {
 	for (auto body : state->dynamicGravBodies) {
 		delete(body);
 	}
-	for (auto navObj : state->Entities) {
+	for (auto navObj : state->entities) {
 		delete(navObj);
 	}
 	for (auto city : state->cities) {
@@ -219,7 +220,7 @@ void resetGameState(GameState* state) {
 	}
 	state->dynamicGravBodies.clear();
 	state->staticGravBodies.clear();
-	state->Entities.clear();
+	state->entities.clear();
 	state->cities.clear();
 	generatePlaySpace(1000, 500, state->seed, state);
 }
