@@ -3,6 +3,7 @@
 static const float R3O2 = 0.8660254f; // root(3)/2
 static const float R2O2 = 0.7071067f; // root(2)/2
 
+
 // Uses a unit circle to draw a rough circle
 void drawCircle(SDL_Renderer* renderer, float cx, float cy, float r)
 {
@@ -32,6 +33,16 @@ void drawCircle(SDL_Renderer* renderer, float cx, float cy, float r)
 	SDL_RenderLines(renderer, points, 17);
 }
 
+void drawSquare(SDL_Renderer* renderer, float cx, float cy, float r) {
+	SDL_FPoint points[5];
+	points[0].x = cx - r;	points[0].y = cy - r;
+	points[1].x = cx + r;	points[1].y = cy - r;
+	points[2].x = cx + r;	points[2].y = cy + r;
+	points[3].x = cx - r;	points[3].y = cy + r;
+	points[4].x = cx - r;	points[4].y = cy - r;
+	SDL_RenderLines(renderer, points, 5);
+}
+
 void drawTiltedSquare(SDL_Renderer* renderer, float cx, float cy, float r) {
 	SDL_FPoint points[5];
 	points[0].x = cx - r;	points[0].y = cy;
@@ -40,4 +51,34 @@ void drawTiltedSquare(SDL_Renderer* renderer, float cx, float cy, float r) {
 	points[3].x = cx;		points[3].y = cy - r;
 	points[4].x = cx - r;	points[4].y = cy;
 	SDL_RenderLines(renderer, points, 5);
+}
+
+void drawCity(SDL_Renderer* renderer, float cx, float cy, float r) {
+	for (int i = 0; i < 7; i++) {
+		float delta = (2 * 3.1415 / 7) * i;
+		SDL_FPoint points[4];
+		points[0].x = cx + 10;	points[0].y = cy - r;
+		points[1].x = cx + 10;	points[1].y = cy - r - 40;
+		points[2].x = cx - 10;	points[2].y = cy - r - 40;
+		points[3].x = cx - 10;	points[3].y = cy - r;
+		for (int i = 0; i < 4; i++) {
+			// Rotation: https://academo.org/demos/rotation-about-point/
+			float px = points[i].x; float py = points[i].y;
+			px -= cx; py -= cy;
+			float xnew = px * cos(delta) - py * sin(delta);
+			float ynew = py * cos(delta) + px * sin(delta);
+			points[i].x = xnew + cx;
+			points[i].y = ynew + cy;
+		}
+		SDL_RenderLines(renderer, points, 4);
+	}
+}
+
+void drawTriangle(SDL_Renderer* renderer, float cx, float cy, float r) {
+	SDL_FPoint points[4];
+	points[0].x = cx;		points[0].y = cy + r;
+	points[1].x = cx - r;	points[1].y = cy - r;
+	points[2].x = cx + r;	points[2].y = cy - r;
+	points[3].x = cx;		points[3].y = cy + r;
+	SDL_RenderLines(renderer, points, 4);
 }

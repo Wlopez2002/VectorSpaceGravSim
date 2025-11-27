@@ -71,12 +71,16 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result)
     for (auto body : gameState->dynamicGravBodies) {
         delete(body);
     }
-    for (auto navObj : gameState->navigationObjects) {
+    for (auto navObj : gameState->Entities) {
         delete(navObj);
+    }
+    for (auto city : gameState->cities) {
+        delete(city);
     }
     gameState->staticGravBodies.clear();
     gameState->dynamicGravBodies.clear();
-    gameState->navigationObjects.clear();
+    gameState->Entities.clear();
+    gameState->cities.clear();
     delete(gameState->player);
     delete(gameState);
 
@@ -260,7 +264,7 @@ bool update(GameState* gameState) {
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
         }
-        for (auto navObj : gameState->navigationObjects) {
+        for (auto navObj : gameState->Entities) {
             navObj->update(gameState);
         }
         gameState->player->update(gameState);
@@ -313,11 +317,12 @@ void renderGame(GameState* gameState) {
     double pyoffset = gameState->player->getLocation().y - WINHEIGHT / 2;
 
     // Draw Player
-    drawCircle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
+    drawTriangle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
 
     // Draw navigation objects
-    for (auto navObj : gameState->navigationObjects) {
-        drawTiltedSquare(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
+    for (auto entity : gameState->Entities) {
+        NavigationObject* navObj = entity->getNav();
+        drawTriangle(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
         if (gameState->debugMode) {
             SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
                 navObj->getD().x - pxoffset, navObj->getD().y - pyoffset);
@@ -346,14 +351,22 @@ void renderGame(GameState* gameState) {
     for (auto body : gameState->staticGravBodies) {
         double dist = (body->location - gameState->player->getLocation()).magnitude() - body->radius;
         if (dist < WINLENGTH) { // check if the body can be seen by the player
-            drawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+            //drawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
             drawTiltedSquare(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+            drawSquare(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius * (2.0/3.0));
         }
     }
     for (auto body : gameState->dynamicGravBodies) {
         double dist = (body->location - gameState->player->getLocation()).magnitude() - body->radius;
         if (dist < WINLENGTH) { // check if the body can be seen by the player
             drawCircle(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
+        }
+    }
+    for (auto city : gameState->cities) {
+        Body* body = city->getTiedBody();
+        double dist = (body->location - gameState->player->getLocation()).magnitude() - body->radius;
+        if (dist < WINLENGTH) { // check if the body can be seen by the player
+            drawCity(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
         }
     }
 
@@ -367,6 +380,7 @@ void renderGame(GameState* gameState) {
         renderText("Player Health " + std::to_string(gameState->player->getHealth()), 10, 110, 12, 12);
         renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
         renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
+        renderText("Entity Count " + std::to_string(gameState->Entities.size()), 10, 170, 12, 12);
         renderText("Dt " + std::to_string(gameState->deltaT), 10, 750, 12, 12);
         if (gameState->player->isParked()) {
             renderText("parked = true", 600, 5, 12, 12);

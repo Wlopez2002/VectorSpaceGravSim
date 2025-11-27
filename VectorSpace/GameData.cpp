@@ -27,9 +27,9 @@ Vector2D doGravity(GameState* state, Vector2D location) {
 
 	for (auto body : staticGravBodies) {
 		Vector2D locVec = body->location - location;
-		if (locVec.magnitude() > 1000) {
-			continue;
-		}
+		//if (locVec.magnitude() > 1000) { //
+		//	continue;
+		//}
 
 		double grav = calcGravity(body->mass, locVec.magnitude());
 
@@ -40,7 +40,7 @@ Vector2D doGravity(GameState* state, Vector2D location) {
 	}  
 	for (auto body : dynamicGravBodies) {
 		Vector2D locVec = body->location - location;
-		if (locVec.magnitude() == 0 or locVec.magnitude() > 1000) {
+		if (locVec.magnitude() == 0){//or locVec.magnitude() > 1000) {
 			continue;
 		}
 
@@ -121,6 +121,34 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 			randSystemAt(Vector2D(x,y), seed++, state, systemRad);
 		}
 	}
+	std::cout << "created " << (int)state->staticGravBodies.size() + (int)state->dynamicGravBodies.size() + 2 << " bodies\n";
+
+	for (int i = 0; i < 300; i++) {
+		Body* tiedBody;
+		tiedBody = (state->dynamicGravBodies.at(rand() % state->dynamicGravBodies.size()));
+		int newID = (int)state->cities.size();
+		bool cityFail = false;
+
+		for (auto city : state->cities) {
+			if (tiedBody->bodyID == city->getTiedBody()->bodyID) { // check if a city is already using a body;
+				cityFail = true;
+			}
+		}
+
+		if (!cityFail) {
+			if (i % 2 == 0) {
+				City* newCity = new City(true, 1, newID, tiedBody);
+				state->cities.push_back(newCity);
+
+			}
+			else {
+				City* newCity = new City(true, 1, newID, tiedBody);
+				state->cities.push_back(newCity);
+			}
+		}
+	}
+
+	std::cout << "populated " << (int)state->cities.size() << " cities\n";
 }
 
 
@@ -130,10 +158,11 @@ void randSystemAt(Vector2D location, int seed, GameState* state, double systemRa
 	int curRad; int curWeightMod;
 
 	// the core of a solar system
-	curRad = rand() % (250 - 100) + 100;
+	curRad = rand() % (175 - 75) + 75;
 	curWeightMod = rand() % (250 - 10) + 10;
 
 	StaticGravBody* core = new StaticGravBody(location, curRad, curRad * curWeightMod);
+	core->bodyType = 's';
 	core->bodyID = (int) state->staticGravBodies.size();
 	state->staticGravBodies.push_back(core);
 
@@ -162,7 +191,7 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 	float randomTimeComp = (float)(rand() % (10-1) + 1) / 10;
 
 	DynamicGravBody* bod = new DynamicGravBody(Vector2D(toOrbit->location.x + (float) distance, 0), curRad, curRad * curWeightMod, 1, -3.1415, 3.1415, randomTimeComp, (float) distance, (float) distance);
-	bod->orbitBody = toOrbit;
+	bod->orbitBody = toOrbit; bod->bodyType = 'p';
 	bod->bodyID = (int) state->dynamicGravBodies.size();
 	state->dynamicGravBodies.push_back(bod);
 
@@ -182,26 +211,15 @@ void resetGameState(GameState* state) {
 	for (auto body : state->dynamicGravBodies) {
 		delete(body);
 	}
-	for (auto navObj : state->navigationObjects) {
+	for (auto navObj : state->Entities) {
 		delete(navObj);
+	}
+	for (auto city : state->cities) {
+		delete(city);
 	}
 	state->dynamicGravBodies.clear();
 	state->staticGravBodies.clear();
-	state->navigationObjects.clear();
+	state->Entities.clear();
+	state->cities.clear();
 	generatePlaySpace(1000, 500, state->seed, state);
-
-	for (int i = 0; i < 10; i++) {
-		NavigationObject* newNavObj = new NavigationObject;
-		newNavObj->forceLocation(Vector2D(0, 0));
-
-		int randIndex = rand() % (state->staticGravBodies.size() - 1);
-		StaticGravBody* bod = state->staticGravBodies.at(randIndex);
-		Vector2D pVect = Vector2D(rand(), rand());
-		pVect = pVect.normalize();
-		pVect = pVect * (bod->radius + 100);
-		pVect = pVect + bod->location;
-		newNavObj->setDestination(pVect);
-
-		state->navigationObjects.push_back(newNavObj);
-	}
 }

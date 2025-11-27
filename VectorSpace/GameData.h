@@ -13,8 +13,11 @@ struct GameState;
 class Body;
 class DynamicGravBody;
 class StaticGravBody;
+class City;
 class NavigationObject;
 class PlayerShip;
+class Entity;
+class EntityCargo;
 
 static const double GCONST = 2000.0; // Gravity constant
 static const double AREASIZE = 8000; // the size of an area
@@ -48,7 +51,8 @@ struct GameState {
 	std::string seedStringBuffer;
 	std::vector<StaticGravBody*> staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies;
-	std::vector<NavigationObject*> navigationObjects;
+	std::vector<Entity*> Entities;
+	std::vector<City*> cities;
 };
 
 // The base parent class for physical bodies, represents planets, suns, etc.
@@ -59,6 +63,7 @@ public:
 	double radius = 0;
 	double mass = 0;
 	int bodyID = -1;
+	char bodyType; // p planet s star
 };
 
 // This class is for bodies that need to move.
@@ -178,186 +183,40 @@ public:
 	}
 };
 
-// The class representing the player and their ship.
-class PlayerShip {
+class City {
 private:
-	int health = 10;
-	int thrustDir = 0;
-	Vector2D location = Vector2D(0, 0);
-	Vector2D speed = Vector2D(0, 0);
-	Vector2D gravDelta = Vector2D(0, 0);
-	Vector2D playerDelta = Vector2D(0, 0);
-	bool brake = false;
-	bool moving = false;
-	bool parked = false;
-	double hitImmunity = 0;
-	double thrust = 1000.0;
-	Body* parkedOn = nullptr;
-	Vector2D parkedDifference;
-	Body* lastCollided = nullptr;
+	int pcPS = 1; // produce or consume per second
+	int storageLimit = 100;
+	int currentStorage = 0;
+	int cityID = -1;
+	Body* tiedBody = nullptr;
 public:
-	int damage(int dam, GameState* state) {
-		health -= dam;
+	City(int pcps, int sl, int id, Body* tb) {
+		pcPS = pcps;
+		storageLimit = sl;
+		tiedBody = tb;
+		cityID = id;
+	}
+	int getID() { return cityID; }
+	Body* getTiedBody() { return tiedBody; }
+	int transfer(int requested) {
+		if (requested >= currentStorage) {
 
-		if (health <= 0) {
-			resetGameState(state);
 		}
-		return health;
+		currentStorage -= requested;
+		return requested;
 	}
-	int getHealth() { return health;}
-	Vector2D getSpeed() { return speed; }
-	Vector2D getLocation() { return location; }
-	Vector2D getGravDelta() { return gravDelta; }
-	Vector2D getPlayerDelta() { return playerDelta; }
-	bool isMoving() { return moving; }
-	bool isParked() { return parked; }
-	double getThrust() { return thrust; }
-	void setThrustDir(int thr) { thrustDir = thr; }
-	void doBrake() { brake = true; }
-	void unbrake() { brake = false; }
-	void setHealth(int h) { health = h; }
-	void forceLocation(Vector2D newLoc) { location = newLoc; }
-	void resetPlayer() {
-		setHealth(10);
-		forceLocation(Vector2D(0, 0));
-		speed = Vector2D(0, 0);
-		thrust = 1000.0;
-	}
-	void incrementThrust(double incr) { 
-		thrust += incr;
-		if (thrust > 4000) {
-			thrust = 4000;
+	void update() {
+		currentStorage += pcPS;
+		if (currentStorage > storageLimit) {
+			currentStorage = storageLimit;
 		}
-		if (thrust < 0) {
-			thrust = 0;
+		if (currentStorage < 0) {
+			currentStorage = 0;
 		}
 	}
-	void deltaSpeed(Vector2D accel) {
-		if (accel == Vector2D(0, 0)) {
-			moving = false;
-		}
-		else {
-			moving = true;
-		}
-		playerDelta = accel;
-
-	}
-	void update(GameState* state) {
-
-		incrementThrust(thrustDir * 500 * state->deltaT);
-
-		if (moving) {
-			parked = false;
-		}
-		if (!parked) {
-			gravDelta = doGravity(state, location);
-			Vector2D newSpeed = speed;
-			if (!brake) {
-				newSpeed = newSpeed + (playerDelta * state->deltaT);
-			}
-			newSpeed = newSpeed + (gravDelta * state->deltaT);
-
-			// decrements if the player is hit immune
-			if (hitImmunity > 0.0) {
-				hitImmunity -= state->deltaT;
-			}
-
-			// deltaT the new Speed for collision check.
-			Vector2D dtSpeed = (newSpeed * state->deltaT);
-			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
-			if (collided != nullptr) { // A body was collided with
-				Vector2D n;
-				Vector2D relativeSpeed = newSpeed - collided->speed;
-				n = location - collided->location;
-				n = n * (1 / n.magnitude());
-
-				newSpeed = newSpeed * 0.75; // a little friction
-				double impulse = relativeSpeed.dot(n) * -(1.5);
-				newSpeed = newSpeed + (n * impulse);
-				lastCollided = collided;
-
-				// Check if the player is to be damaged from the impact;
-				if (!(hitImmunity > 0.0) and relativeSpeed.magnitude() > 400) {
-					damage((int) newSpeed.magnitude()/300, state);
-					hitImmunity = 1;
-				}
-			}
-
-			// A body can be considered parked if it is within a range and the speed of the player and body are close.
-			if (lastCollided != nullptr and !moving) {
-				if ((location - lastCollided->location).magnitude() < lastCollided->radius + 10
-					&& speed.x > lastCollided->speed.x - 100 && speed.x < lastCollided->speed.x + 100
-					&& speed.y > lastCollided->speed.y - 100 && speed.y < lastCollided->speed.y + 100) {
-					Vector2D diff = (lastCollided->location - location);
-					parkedDifference = diff + (diff * (1 / diff.magnitude())) * 4; // the * 4 is added to help with collison.
-					parkedOn = lastCollided;
-					parked = true;
-				}
-				else {
-					parked = false;
-				}
-			}
-
-			// cap the new speed
-			if (newSpeed.x > 10000) {
-				newSpeed.x = 10000;
-			}
-			if (newSpeed.x < -10000) {
-				newSpeed.x = -10000;
-			}
-			if (newSpeed.y > 10000) {
-				newSpeed.y = 10000;
-			}
-			if (newSpeed.y < -10000) {
-				newSpeed.y = -10000;
-			}
-
-			speed = newSpeed;
-		}
-
-		// if the player is braking and not parked.
-		if (brake and !parked) {
-			// getting the closest body to match speed.
-			Body* closest = closestToPoint(state, location);
-			Vector2D speedDiff = closest->speed - speed;
-			if (closest != nullptr and speedDiff.magnitude() != 0) {
-				speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * thrust * state->deltaT;
-			} else {
-				speedDiff = speed * -1;
-				speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * thrust * state->deltaT;
-			}
-		}
-
-		// if the player is parked match their speed with what they are parked on.
-		// Otherwise let the player move as normal
-		if (parked) {
-			speed = parkedOn->speed;
-			location = (parkedOn->location - parkedDifference);
-		}
-		else {
-			location = location + (speed * state->deltaT);
-		}
-
-		// Stop the player of they would go over the AREASIZE
-		if (location.x < -AREASIZE) {
-			location.x = -AREASIZE;
-			speed.x = 0;
-		}
-		if (location.x > AREASIZE) {
-			location.x = AREASIZE;
-			speed.x = 0;
-		}
-		if (location.y < -AREASIZE) {
-			location.y = -AREASIZE;
-			speed.y = 0;
-		}
-		if (location.y > AREASIZE) {
-			location.y = AREASIZE;
-			speed.y = 0;
-		}
-	}
-
 };
+
 
 // TODO: this class is being experimented with and is subject to frequent changes
 // The class represting things that navigate the a world of bodies.
@@ -368,6 +227,7 @@ private:
 	Vector2D start = location;
 	Vector2D currentDest = destination;
 	Vector2D speed = Vector2D(0, 0);
+	double impulseSpeed;
 public:
 	Body* closestBody = nullptr;
 	Vector2D getLocation() { return location; }
@@ -459,7 +319,8 @@ public:
 		* but I feel they are reasonable.
 		*/
 		Vector2D newSpeed = speed;
-		//newSpeed = newSpeed + (doGravity(state, location) * state->deltaT);
+		Vector2D gravVect = (doGravity(state, location) * state->deltaT);
+		newSpeed = newSpeed + gravVect;
 
 		// Temporary testing code just to see the object move
 		// get a random body to use for a new destination
@@ -478,34 +339,22 @@ public:
 		// Run the avoid bodies function to get the current destination
 		avoidBodies(state);
 
+		impulseSpeed = 10;
 		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D locationAsIs = location + (newSpeed * state->deltaT);
-		Vector2D speedWithImpulse = newSpeed + (currentDest - location).normalize() * 500;
+		Vector2D speedWithImpulse = newSpeed + (currentDest - location).normalize() * impulseSpeed;
 		Vector2D locationWithImpulse = location + (speedWithImpulse * state->deltaT);
 		if ((currentDest - locationWithImpulse).magnitude() < (currentDest - locationAsIs).magnitude()) {
 			newSpeed = speedWithImpulse;
 
 			// The limit is to prevent zigzagging
-			if (abs(newSpeed.x) < 100) {
+			if (abs(newSpeed.x) < impulseSpeed / 4) {
 				newSpeed.x = 0;
 			}
-			if (abs(newSpeed.y) < 100) {
+			if (abs(newSpeed.y) < impulseSpeed / 4) {
 				newSpeed.y = 0;
 			}
 		}
-		
-		// collision
-		// TODO: there is some bug where the collision forces the nav object inside a body
-		//Vector2D dtSpeed = (newSpeed * state->deltaT);
-		//Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
-		//if (collided != nullptr) { // A body was collided with
-		//	Vector2D n;
-		//	Vector2D relativeSpeed = newSpeed - collided->speed;
-		//	n = location - collided->location;
-		//	n = n * (1 / n.magnitude());
-		//	double impulse = relativeSpeed.dot(n) * -(1.5);
-		//	newSpeed = newSpeed + (n * impulse);
-		//}
 
 		// cap the new speed
 		if (newSpeed.x > 500) {
@@ -522,6 +371,7 @@ public:
 		}
 
 		speed = newSpeed;
+
 		// change location by speed
 		location = location + (speed * state->deltaT);
 
@@ -544,3 +394,221 @@ public:
 	}
 };
 
+// The class representing the player and their ship.
+class PlayerShip {
+private:
+	int health = 10;
+	int thrustDir = 0;
+	Vector2D location = Vector2D(0, 0);
+	Vector2D speed = Vector2D(0, 0);
+	Vector2D gravDelta = Vector2D(0, 0);
+	Vector2D playerDelta = Vector2D(0, 0);
+	bool brake = false;
+	bool moving = false;
+	bool parked = false;
+	double hitImmunity = 0;
+	double thrust = 1000.0;
+	Body* parkedOn = nullptr;
+	Vector2D parkedDifference;
+	Body* lastCollided = nullptr;
+public:
+	int damage(int dam, GameState* state) {
+		health -= dam;
+
+		if (health <= 0) {
+			resetGameState(state);
+		}
+		return health;
+	}
+	int getHealth() { return health; }
+	Vector2D getSpeed() { return speed; }
+	Vector2D getLocation() { return location; }
+	Vector2D getGravDelta() { return gravDelta; }
+	Vector2D getPlayerDelta() { return playerDelta; }
+	bool isMoving() { return moving; }
+	bool isParked() { return parked; }
+	double getThrust() { return thrust; }
+	void setThrustDir(int thr) { thrustDir = thr; }
+	void doBrake() { brake = true; }
+	void unbrake() { brake = false; }
+	void setHealth(int h) { health = h; }
+	void forceLocation(Vector2D newLoc) { location = newLoc; }
+	void resetPlayer() {
+		setHealth(10);
+		forceLocation(Vector2D(0, 0));
+		speed = Vector2D(0, 0);
+		thrust = 1000.0;
+	}
+	void incrementThrust(double incr) {
+		thrust += incr;
+		if (thrust > 4000) {
+			thrust = 4000;
+		}
+		if (thrust < 0) {
+			thrust = 0;
+		}
+	}
+	void deltaSpeed(Vector2D accel) {
+		if (accel == Vector2D(0, 0)) {
+			moving = false;
+		}
+		else {
+			moving = true;
+		}
+		playerDelta = accel;
+
+	}
+	void update(GameState* state) {
+
+		incrementThrust(thrustDir * 500 * state->deltaT);
+
+		if (moving) {
+			parked = false;
+		}
+		if (!parked) {
+			gravDelta = doGravity(state, location);
+			Vector2D newSpeed = speed;
+			if (!brake) {
+				newSpeed = newSpeed + (playerDelta * state->deltaT);
+			}
+			newSpeed = newSpeed + (gravDelta * state->deltaT);
+
+			// decrements if the player is hit immune
+			if (hitImmunity > 0.0) {
+				hitImmunity -= state->deltaT;
+			}
+
+			// deltaT the new Speed for collision check.
+			Vector2D dtSpeed = (newSpeed * state->deltaT);
+			Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
+			if (collided != nullptr) { // A body was collided with
+				Vector2D n;
+				Vector2D relativeSpeed = newSpeed - collided->speed;
+				n = location - collided->location;
+				n = n * (1 / n.magnitude());
+
+				newSpeed = newSpeed * 0.75; // a little friction
+				double impulse = relativeSpeed.dot(n) * -(1.5);
+				newSpeed = newSpeed + (n * impulse);
+				lastCollided = collided;
+
+				// Check if the player is to be damaged from the impact;
+				if (!(hitImmunity > 0.0) and relativeSpeed.magnitude() > 400) {
+					damage((int)newSpeed.magnitude() / 300, state);
+					hitImmunity = 1;
+				}
+			}
+
+			// A body can be considered parked if it is within a range and the speed of the player and body are close.
+			if (lastCollided != nullptr and !moving) {
+				if ((location - lastCollided->location).magnitude() < lastCollided->radius + 10
+					&& speed.x > lastCollided->speed.x - 100 && speed.x < lastCollided->speed.x + 100
+					&& speed.y > lastCollided->speed.y - 100 && speed.y < lastCollided->speed.y + 100) {
+					Vector2D diff = (lastCollided->location - location);
+					parkedDifference = diff + (diff * (1 / diff.magnitude())) * 4; // the * 4 is added to help with collison.
+					parkedOn = lastCollided;
+					parked = true;
+				}
+				else {
+					parked = false;
+				}
+			}
+
+			// cap the new speed
+			if (newSpeed.x > 10000) {
+				newSpeed.x = 10000;
+			}
+			if (newSpeed.x < -10000) {
+				newSpeed.x = -10000;
+			}
+			if (newSpeed.y > 10000) {
+				newSpeed.y = 10000;
+			}
+			if (newSpeed.y < -10000) {
+				newSpeed.y = -10000;
+			}
+
+			speed = newSpeed;
+		}
+
+		// if the player is braking and not parked.
+		if (brake and !parked) {
+			// getting the closest body to match speed.
+			Body* closest = closestToPoint(state, location);
+			Vector2D speedDiff = closest->speed - speed;
+			if (closest != nullptr and speedDiff.magnitude() != 0) {
+				speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * thrust * state->deltaT;
+			}
+			else {
+				speedDiff = speed * -1;
+				speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * thrust * state->deltaT;
+			}
+		}
+
+		// if the player is parked match their speed with what they are parked on.
+		// Otherwise let the player move as normal
+		if (parked) {
+			speed = parkedOn->speed;
+			location = (parkedOn->location - parkedDifference);
+		}
+		else {
+			location = location + (speed * state->deltaT);
+		}
+
+		// Stop the player of they would go over the AREASIZE
+		if (location.x < -AREASIZE) {
+			location.x = -AREASIZE;
+			speed.x = 0;
+		}
+		if (location.x > AREASIZE) {
+			location.x = AREASIZE;
+			speed.x = 0;
+		}
+		if (location.y < -AREASIZE) {
+			location.y = -AREASIZE;
+			speed.y = 0;
+		}
+		if (location.y > AREASIZE) {
+			location.y = AREASIZE;
+			speed.y = 0;
+		}
+	}
+
+};
+
+// An entity is much like a player
+// much of it's movement is handled by a Navigation Object.
+class Entity {
+private:
+	char faction = 'n'; // no faction
+	int health = 10;
+	NavigationObject navHandler;
+public:
+	int damage(int dam, GameState* state) {
+		health -= dam;
+
+		if (health <= 0) {
+			resetGameState(state);
+		}
+		return health;
+	}
+	Vector2D getLocation() { return navHandler.getLocation(); }
+	NavigationObject* getNav() { return &navHandler; }
+	int getHealth() { return health; }
+	void setHealth(int h) { health = h; }
+	void update(GameState* state) {
+		navHandler.update(state);
+	}
+};
+
+class EntityCargo: Entity {
+private:
+	int CargoCount  = 0;
+	int CargoCap = 10;
+	City* home;
+	City* dest;
+public:
+	void update(GameState* state) {
+
+	}
+};
