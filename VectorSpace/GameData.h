@@ -363,7 +363,7 @@ public:
 		// Run the avoid bodies function to get the current destination
 		avoidBodies(state);
 
-		impulseSpeed = 10;
+		impulseSpeed = 20;
 		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D locationAsIs = location + (newSpeed * state->deltaT);
 		Vector2D speedWithImpulse = newSpeed + ((currentDest - location).normalize() * impulseSpeed);
@@ -385,17 +385,17 @@ public:
 		}
 
 		// cap the new speed
-		if (newSpeed.x > 1400) {
-			newSpeed.x = 1400;
+		if (newSpeed.x > 800) {
+			newSpeed.x = 800;
 		}
-		if (newSpeed.x < -1400) {
-			newSpeed.x = -1400;
+		if (newSpeed.x < -800) {
+			newSpeed.x = -800;
 		}
-		if (newSpeed.y > 1400) {
-			newSpeed.y = 1400;
+		if (newSpeed.y > 800) {
+			newSpeed.y = 800;
 		}
-		if (newSpeed.y < -1400) {
-			newSpeed.y = -1400;
+		if (newSpeed.y < -800) {
+			newSpeed.y = -800;
 		}
 
 		speed = newSpeed;
@@ -646,8 +646,9 @@ public:
 	EntityCargo() {
 		entityType = 'c';
 	}
+
 	void update(GameState* state) {
-		if (destCity == nullptr) {
+;		if (destCity == nullptr) {
 			if (cargoCount >= cargoCap) {
 				destCity = getBestConsumer(state);
 			}
@@ -655,12 +656,12 @@ public:
 				destCity = getBestProducer(state);
 			}
 		} else if ((navHandler.getLocation() - destCity->getTiedBody()->location).magnitude() <= destCity->getTiedBody()->radius + 100) { // take or supply the city if close by
-			if (cargoCount >= cargoCap) {
-				cargoCount = destCity->give(cargoCap);
+			if (destCity->getpcPS() > 0) {
+				cargoCount = destCity->take(cargoCap);
 				destCity = getBestConsumer(state);
 			}
 			else {
-				cargoCount = destCity->take(cargoCap);
+				cargoCount = destCity->give(cargoCap);
 				destCity = getBestProducer(state);
 			}
 		}
@@ -681,9 +682,11 @@ public:
 		for (City* city : state->cities) {
 			if (city->getpcPS() > 0 and city->getCurStorage() > 0) { // only producers
 				float distance = (navHandler.getLocation() - city->getTiedBody()->location).magnitude();
-				if ((closest == nullptr) or (distance < closestDis)) {
-					closest = city;
-					closestDis = distance;
+				if (city->getCurStorage() > cargoCap) { // A trip is only worth it if the city can fill the cargo hold
+					if ((closest == nullptr) or (distance < closestDis)) {
+						closest = city;
+						closestDis = distance;
+					}
 				}
 			}
 		}

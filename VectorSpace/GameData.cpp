@@ -149,7 +149,14 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 	std::cout << "populated " << (int)state->cities.size() << " cities\n";
 
 	//state->entities.push_back(new Entity());
-	state->entities.push_back((Entity*) new EntityCargo());
+	for (int i = 0; i < 100; i++) {
+		Entity* newCargo = (Entity*) new EntityCargo();
+		int bound = AREASIZE * 2;
+		newCargo->getNav()->forceLocation(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+		newCargo->getNav()->setDestination(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+		state->entities.push_back((Entity*) newCargo);
+	}
+	
 	std::cout << "populated " << (int)state->entities.size() << " entities\n";
 }
 
