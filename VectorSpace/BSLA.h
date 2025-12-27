@@ -40,6 +40,9 @@ public:
 	bool operator==(Vector2D vect) {
 		return (x == vect.x) and (y == vect.y);
 	}
+	bool cmpMag(Vector2D toCMP) {
+		return (abs(x * x) + abs(y * y)) > abs(toCMP.x * toCMP.x) + abs(toCMP.y * toCMP.y);
+	}
 	double dot(Vector2D vect) {
 		return (x * vect.x) + (y * vect.y);
 	}

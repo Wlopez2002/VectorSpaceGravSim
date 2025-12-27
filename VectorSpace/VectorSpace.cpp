@@ -264,8 +264,17 @@ bool update(GameState* gameState) {
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
         }
-        for (auto navObj : gameState->entities) {
-            navObj->update(gameState);
+        for (auto entityUncast : gameState->entities) {
+            switch (entityUncast->getType())
+            {
+            case 'b':
+                entityUncast->update(gameState);
+                break;
+            case 'c':
+                EntityCargo* entityCast = (EntityCargo*) entityUncast;
+                entityCast->update(gameState);
+                break;
+            }
         }
         for (auto city : gameState->cities) {
             city->update(gameState);

@@ -19,7 +19,6 @@ Vector2D getOrbitSpeed(Body* toOrbit, Vector2D myLocation) {
 }
 
 // Calculates the speed vector bodies are causing to a location from their gravity.
-// TODO: Skip Calculaton when the gravity impact would be negligible
 Vector2D doGravity(GameState* state, Vector2D location) {
 	std::vector<StaticGravBody*> staticGravBodies = state->staticGravBodies;
 	std::vector<DynamicGravBody*> dynamicGravBodies = state->dynamicGravBodies;
@@ -114,7 +113,7 @@ Body* closestToPoint(GameState* state, Vector2D location) {
 	return toReturn;
 }
 
-// Fills a play are with systems.
+// Fills a play area with systems.
 void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* state) {
 	for (double y = -AREASIZE + systemRad; y < AREASIZE; y = y + 2*systemRad + systemPad) {
 		for (double x = -AREASIZE + systemRad; x < AREASIZE; x = x + 2*systemRad + systemPad) {
@@ -137,19 +136,21 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 		}
 
 		if (!cityFail) {
-			if (i % 2 == 0) {
-				City* newCity = new City(1, 1000, newID, tiedBody);
-				state->cities.push_back(newCity);
+			if (i % 2 == 0) { // sets producers and consumers
+				state->cities.push_back(new City(1, 1000, newID, tiedBody));
 
 			}
 			else {
-				City* newCity = new City(-1, 1000, newID, tiedBody);
-				state->cities.push_back(newCity);
+				state->cities.push_back(new City(-1, 1000, newID, tiedBody));
 			}
 		}
 	}
 
 	std::cout << "populated " << (int)state->cities.size() << " cities\n";
+
+	//state->entities.push_back(new Entity());
+	state->entities.push_back((Entity*) new EntityCargo());
+	std::cout << "populated " << (int)state->entities.size() << " entities\n";
 }
 
 

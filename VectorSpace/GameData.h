@@ -184,7 +184,7 @@ public:
 };
 
 class City {
-private:
+protected:
 	float pcPS = 1; // produce or consume per second
 	float storageLimit = 100;
 	float currentStorage = 0;
@@ -202,12 +202,23 @@ public:
 	float getCurStorage() { return currentStorage; }
 	int getID() { return cityID; }
 	Body* getTiedBody() { return tiedBody; }
-	float transfer(float requested) {
+	float take(float requested) { // returns how much was taken
 		if (requested >= currentStorage) {
-
+			int temp = currentStorage;
+			currentStorage = 0;
+			return temp;
 		}
 		currentStorage -= requested;
 		return requested;
+	}
+	float give(float requested) { // returns the the remainder
+		if (currentStorage + requested > storageLimit) {
+			int remainder = storageLimit - (currentStorage + requested);
+			currentStorage = storageLimit;
+			return remainder;
+		}
+		currentStorage += requested;
+		return 0;
 	}
 	void update(GameState* state) {
 		currentStorage += pcPS * state->deltaT;
@@ -224,7 +235,7 @@ public:
 // TODO: this class is being experimented with and is subject to frequent changes
 // The class represting things that navigate the a world of bodies.
 class NavigationObject {
-private:
+protected:
 	Vector2D location = Vector2D(0, 0);
 	Vector2D destination = Vector2D(0, 0);
 	Vector2D start = location;
@@ -260,19 +271,25 @@ public:
 		Vector2D closestCBody;
 		bool closestBehind = false;
 		for (auto body : state->staticGravBodies) {
+			// if the destination is in a body, go there anyway
+			if ((destination - body->location).magnitude() <= body->radius) {
+				continue;
+			}
+
 			Vector2D dVect = body->location - location;
 			Vector2D lineVecrProj;
 			lineVecrProj = dVect.proj(lineVect);
 			Vector2D C = lineVecrProj + location; // the location of C
 			double distB = (body->location - C).magnitude();
 
-			// This method will concider bodies that are "Behind the body" thus those need to be passed over
+			// This method will consider bodies that are "Behind the body" thus those need to be passed over
 			// A body is in front if lineVecrProj and lineVect have the same normal (or the same signs for x and y)
 			if (std::signbit(lineVecrProj.x) != std::signbit(lineVect.x) and std::signbit(lineVecrProj.y) != std::signbit(lineVect.y)){
 				continue;
 			}
 			// We also should not concider bodies that are further than B
-			if (lineVecrProj.magnitude() > lineVect.magnitude()) {
+			//if (lineVecrProj.magnitude() > lineVect.magnitude()) {
+			if (lineVecrProj.cmpMag(lineVect)){
 				continue;
 			}
 			if (distB <= body->radius + 10) {
@@ -285,6 +302,10 @@ public:
 			}
 		}
 		for (auto body : state->dynamicGravBodies) { // The exact same code as above
+			if ((destination - body->location).magnitude() <= body->radius) {
+				continue;
+			}
+
 			Vector2D dVect = body->location - location;
 			Vector2D lineVecrProj;
 			lineVecrProj = dVect.proj(lineVect);
@@ -293,7 +314,7 @@ public:
 			if (std::signbit(lineVecrProj.x) != std::signbit(lineVect.x) and std::signbit(lineVecrProj.y) != std::signbit(lineVect.y)) {
 				continue;
 			}
-			if (lineVecrProj.magnitude() > lineVect.magnitude()) {
+			if (lineVecrProj.cmpMag(lineVect)) {
 				continue;
 			}
 			if (distB <= body->radius + 10) {
@@ -322,8 +343,8 @@ public:
 		* but I feel they are reasonable.
 		*/
 		Vector2D newSpeed = speed;
-		Vector2D gravVect = (doGravity(state, location) * state->deltaT);
-		newSpeed = newSpeed + gravVect;
+		//Vector2D gravVect = (doGravity(state, location) * state->deltaT);
+		//newSpeed = newSpeed + gravVect;
 
 		// Temporary testing code just to see the object move
 		// get a random body to use for a new destination
@@ -345,11 +366,15 @@ public:
 		impulseSpeed = 10;
 		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D locationAsIs = location + (newSpeed * state->deltaT);
-		Vector2D speedWithImpulse = newSpeed + (currentDest - location).normalize() * impulseSpeed;
+		Vector2D speedWithImpulse = newSpeed + ((currentDest - location).normalize() * impulseSpeed);
 		Vector2D locationWithImpulse = location + (speedWithImpulse * state->deltaT);
-		if ((currentDest - locationWithImpulse).magnitude() < (currentDest - locationAsIs).magnitude()) {
+		//if ((currentDest - locationAsIs).cmpMag(currentDest - location)) { // if staying put is better than the current speed;
+		//	Vector2D speedDiff = speed * -1;
+		//	speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * impulseSpeed * state->deltaT;
+		//	std::cout << "brake\n";
+		//}
+		if ((currentDest - locationAsIs).cmpMag(currentDest - locationWithImpulse)) { // is the locationAsIs worse than locationWithImpulse
 			newSpeed = speedWithImpulse;
-
 			// The limit is to prevent zigzagging
 			if (abs(newSpeed.x) < impulseSpeed / 4) {
 				newSpeed.x = 0;
@@ -360,17 +385,17 @@ public:
 		}
 
 		// cap the new speed
-		if (newSpeed.x > 500) {
-			newSpeed.x = 500;
+		if (newSpeed.x > 1400) {
+			newSpeed.x = 1400;
 		}
-		if (newSpeed.x < -500) {
-			newSpeed.x = -500;
+		if (newSpeed.x < -1400) {
+			newSpeed.x = -1400;
 		}
-		if (newSpeed.y > 500) {
-			newSpeed.y = 500;
+		if (newSpeed.y > 1400) {
+			newSpeed.y = 1400;
 		}
-		if (newSpeed.y < -500) {
-			newSpeed.y = -500;
+		if (newSpeed.y < -1400) {
+			newSpeed.y = -1400;
 		}
 
 		speed = newSpeed;
@@ -582,11 +607,16 @@ public:
 // An entity is much like a player
 // much of it's movement is handled by a Navigation Object.
 class Entity {
-private:
+protected:
 	char faction = 'n'; // no faction
+	char entityType;
 	int health = 10;
 	NavigationObject navHandler;
 public:
+	Entity() {
+		entityType = 'b';
+	}
+	char getType() { return entityType; }
 	int damage(int dam, GameState* state) {
 		health -= dam;
 
@@ -604,14 +634,73 @@ public:
 	}
 };
 
+// An entity that brings supplies from producer to consumer cities;
+// Should this project ever introduce parallelization there will likely be issues here.
+// TODO: This works but there is a spin issue. there needs to be a better way to approach a moving object
 class EntityCargo: Entity {
-private:
-	int CargoCount  = 0;
-	int CargoCap = 10;
-	City* home;
-	City* dest;
+protected:
+	int cargoCount  = 0;
+	int cargoCap = 10;
+	City* destCity = nullptr;
 public:
+	EntityCargo() {
+		entityType = 'c';
+	}
 	void update(GameState* state) {
+		if (destCity == nullptr) {
+			if (cargoCount >= cargoCap) {
+				destCity = getBestConsumer(state);
+			}
+			else {
+				destCity = getBestProducer(state);
+			}
+		} else if ((navHandler.getLocation() - destCity->getTiedBody()->location).magnitude() <= destCity->getTiedBody()->radius + 100) { // take or supply the city if close by
+			if (cargoCount >= cargoCap) {
+				cargoCount = destCity->give(cargoCap);
+				destCity = getBestConsumer(state);
+			}
+			else {
+				cargoCount = destCity->take(cargoCap);
+				destCity = getBestProducer(state);
+			}
+		}
+		
+		
+		if (destCity != nullptr) {
+			//std::cout << navHandler.getD().toString() << "\n";
+			Vector2D destLoc = destCity->getTiedBody()->location;
+			navHandler.setDestination(destLoc);
+		}
 
+		navHandler.update(state);
+	}
+	// checks if a city has the supply to fill to cargoCap
+	City* getBestProducer(GameState* state) {
+		City* closest = nullptr;
+		float closestDis = -1;
+		for (City* city : state->cities) {
+			if (city->getpcPS() > 0 and city->getCurStorage() > 0) { // only producers
+				float distance = (navHandler.getLocation() - city->getTiedBody()->location).magnitude();
+				if ((closest == nullptr) or (distance < closestDis)) {
+					closest = city;
+					closestDis = distance;
+				}
+			}
+		}
+		return closest;
+	}
+	City* getBestConsumer(GameState* state) {
+		City* closest = nullptr;
+		float closestDis = -1;
+		for (City* city : state->cities) {
+			if (city->getpcPS() <= 0 and city->getCurStorage() < city->getStorageLimit()) { // only producers
+				float distance = (navHandler.getLocation() - city->getTiedBody()->location).magnitude();
+				if ((closest == nullptr) or (distance < closestDis)) {
+					closest = city;
+					closestDis = distance;
+				}
+			}
+		}
+		return closest;
 	}
 };
