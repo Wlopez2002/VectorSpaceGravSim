@@ -343,8 +343,8 @@ public:
 		* but I feel they are reasonable.
 		*/
 		Vector2D newSpeed = speed;
-		//Vector2D gravVect = (doGravity(state, location) * state->deltaT);
-		//newSpeed = newSpeed + gravVect;
+		Vector2D gravVect = (doGravity(state, location) * state->deltaT);
+		newSpeed = newSpeed + gravVect;
 
 		// Temporary testing code just to see the object move
 		// get a random body to use for a new destination
@@ -374,11 +374,6 @@ public:
 		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D speedWithImpulse = newSpeed + ((currentDest - location).normalize() * impulseSpeed);
 		Vector2D locationWithImpulse = location + (speedWithImpulse * state->deltaT);
-		//if ((currentDest - locationAsIs).cmpMag(currentDest - location)) { // if staying put is better than the current speed;
-		//	Vector2D speedDiff = speed * -1;
-		//	speed = speed + (speedDiff * (1 / speedDiff.magnitude())) * impulseSpeed * state->deltaT;
-		//	std::cout << "brake\n";
-		//}
 		if ((currentDest - locationAsIs).cmpMag(currentDest - locationWithImpulse)) { // is the locationAsIs worse than locationWithImpulse
 			newSpeed = speedWithImpulse;
 			// The limit is to prevent zigzagging
@@ -388,6 +383,19 @@ public:
 			if (abs(newSpeed.y) < impulseSpeed / 4) {
 				newSpeed.y = 0;
 			}
+		}
+
+		Vector2D dtSpeed = (newSpeed * state->deltaT);
+		Body* collided = willCollide(state, location + Vector2D(dtSpeed.x, dtSpeed.y));
+		if (collided != nullptr) { // A body was collided with
+			Vector2D n;
+			Vector2D relativeSpeed = newSpeed - collided->speed;
+			n = location - collided->location;
+			n = n * (1 / n.magnitude());
+
+			newSpeed = newSpeed * 0.75; // a little friction
+			double impulse = relativeSpeed.dot(n) * -(1.5);
+			newSpeed = newSpeed + (n * impulse);
 		}
 
 		// cap the new speed
