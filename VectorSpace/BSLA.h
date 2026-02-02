@@ -1,5 +1,5 @@
 /*
-Bill's Shity Linear Algebra
+Bill's Simple Linear Algebra
 */
 
 #pragma once

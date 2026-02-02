@@ -364,8 +364,14 @@ public:
 		avoidBodies(state);
 
 		impulseSpeed = 20;
-		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D locationAsIs = location + (newSpeed * state->deltaT);
+		// if moving forward is worse thank brakeing
+		Vector2D locationWithBrake = location + ((newSpeed * 0.9) * state->deltaT);
+		if ((currentDest - locationAsIs).cmpMag(currentDest - locationWithBrake)) {
+			newSpeed = newSpeed * 0.9;
+		}
+
+		// if the current speed gets close to currentDest do not add an impulse to speed
 		Vector2D speedWithImpulse = newSpeed + ((currentDest - location).normalize() * impulseSpeed);
 		Vector2D locationWithImpulse = location + (speedWithImpulse * state->deltaT);
 		//if ((currentDest - locationAsIs).cmpMag(currentDest - location)) { // if staying put is better than the current speed;
@@ -636,7 +642,6 @@ public:
 
 // An entity that brings supplies from producer to consumer cities;
 // Should this project ever introduce parallelization there will likely be issues here.
-// TODO: This works but there is a spin issue. there needs to be a better way to approach a moving object
 class EntityCargo: Entity {
 protected:
 	int cargoCount  = 0;
