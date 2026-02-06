@@ -268,12 +268,22 @@ bool update(GameState* gameState) {
             switch (entityUncast->getType())
             {
             case 'b':
+            {
                 entityUncast->update(gameState);
                 break;
+            }
             case 'c':
-                EntityCargo* entityCast = (EntityCargo*) entityUncast;
-                entityCast->update(gameState);
+            {
+                EntityCargo* entityCargo = (EntityCargo*)entityUncast;
+                entityCargo->update(gameState);
                 break;
+            }
+            case 'p':
+            {
+                EntityPirate* entityPirate = (EntityPirate*)entityUncast;
+                entityPirate->update(gameState);
+                break;
+            }
             }
         }
         for (auto city : gameState->cities) {
@@ -334,10 +344,20 @@ void renderGame(GameState* gameState) {
     // Draw Player
     drawTriangle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
 
-    // Draw navigation objects
+    // Draw entities objects
     for (auto entity : gameState->entities) {
+        switch (entity->getFaction())
+        {
+        case 'e':
+            SDL_SetRenderDrawColor(renderer, 0xFF, 0x0, 0x0, 0xFF);
+            break;
+        default:
+            break;
+        }
+
         NavigationObject* navObj = entity->getNav();
         drawTriangle(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
         if (gameState->debugMode) {
             SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
                 navObj->getD().x - pxoffset, navObj->getD().y - pyoffset);
@@ -383,12 +403,12 @@ void renderGame(GameState* gameState) {
         if (dist < WINLENGTH) { // check if the body can be seen by the player
             drawCity(renderer, body->location.x - pxoffset, body->location.y - pyoffset, body->radius);
             int screenx; int screeny;
-            if (gameState->debugMode) {
+            //if (gameState->debugMode) {
                 renderText(std::to_string(city->getID()), body->location.x - pxoffset, body->location.y - pyoffset, 12, 12);
                 renderText(std::to_string(city->getpcPS()), body->location.x - pxoffset, 12 + body->location.y - pyoffset, 12, 12);
                 renderText(std::to_string(city->getCurStorage()) + "|" + std::to_string(city->getStorageLimit()), 
                     body->location.x - pxoffset, 24 + body->location.y - pyoffset, 12, 12);
-            }
+            //}
         }
     }
 

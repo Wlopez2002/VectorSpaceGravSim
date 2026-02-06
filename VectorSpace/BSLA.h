@@ -141,3 +141,5 @@ public:
 		return "[" + std::to_string(v1.x) + " " + std::to_string(v1.y) + "]" + "[" + std::to_string(v2.x) + " " + std::to_string(v2.y) + "]";
 	}
 };
+
+Vector2D rotateVector2D(Vector2D toRotate, float delta);

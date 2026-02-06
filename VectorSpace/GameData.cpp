@@ -123,7 +123,7 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 	int bodyCount = (int)state->staticGravBodies.size() + (int)state->dynamicGravBodies.size();
 	std::cout << "created " << bodyCount << " bodies\n";
 
-	for (int i = 0; i < bodyCount/2; i++) {
+	for (int i = 0; i < bodyCount/4; i++) {
 		Body* tiedBody;
 		tiedBody = (state->dynamicGravBodies.at(rand() % state->dynamicGravBodies.size()));
 		int newID = (int)state->cities.size();
@@ -148,8 +148,7 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 
 	std::cout << "populated " << (int)state->cities.size() << " cities\n";
 
-	//state->entities.push_back(new Entity());
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < (int)state->cities.size(); i++) {
 		Entity* newCargo = (Entity*) new EntityCargo();
 		int bound = AREASIZE * 2;
 		newCargo->getNav()->forceLocation(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
@@ -157,6 +156,12 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 		state->entities.push_back((Entity*) newCargo);
 	}
 	
+	Entity* newPirate = (Entity*) new EntityPirate(EntityPirate::AIBehavior::Driveby);
+	int bound = AREASIZE * 2;
+	newPirate->getNav()->forceLocation(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+	newPirate->getNav()->setDestination(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+	state->entities.push_back((Entity*)newPirate);
+
 	std::cout << "populated " << (int)state->entities.size() << " entities\n";
 }
 

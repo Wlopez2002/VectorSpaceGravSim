@@ -18,6 +18,7 @@ class NavigationObject;
 class PlayerShip;
 class Entity;
 class EntityCargo;
+class EntityPirate;
 
 static const double GCONST = 2000.0; // Gravity constant
 static const double AREASIZE = 8000; // the size of an area
@@ -630,6 +631,7 @@ public:
 	Entity() {
 		entityType = 'b';
 	}
+	char getFaction() { return faction; }
 	char getType() { return entityType; }
 	int damage(int dam, GameState* state) {
 		health -= dam;
@@ -681,7 +683,6 @@ public:
 		
 		
 		if (destCity != nullptr) {
-			//std::cout << navHandler.getD().toString() << "\n";
 			Vector2D destLoc = destCity->getTiedBody()->location;
 			navHandler.setDestination(destLoc);
 		}
@@ -718,5 +719,39 @@ public:
 			}
 		}
 		return closest;
+	}
+};
+
+class EntityPirate : Entity {
+protected:
+	enum AIBehavior;
+	enum AIBAim;
+	AIBehavior currentBehavior;
+public:
+	enum AIBehavior { Reckless, Cautious, Driveby };
+	enum AIBAim { PoorAim, ExactAim, LeadingAim };
+	EntityPirate(AIBehavior behavior) {
+		currentBehavior = behavior;
+		entityType = 'p';
+		faction = 'e';
+	}
+	void update(GameState* state) {
+		float dfp = (navHandler.getLocation() - state->player->getLocation()).magnitude();
+		Vector2D pte = (state->player->getLocation() - navHandler.getLocation()).normalize(); // player to entity
+		switch (currentBehavior) {
+		case Reckless:
+			if (dfp > 100) {
+				navHandler.setDestination(state->player->getLocation() + pte * 100);
+			}
+			break;
+		case Cautious:
+			navHandler.setDestination(state->player->getLocation() - pte * 300);
+			break;
+		case Driveby:
+			Vector2D s = state->player->getLocation() + rotateVector2D(pte * 300, 3.1415/2);
+			navHandler.setDestination(s);
+			break;
+		}
+		navHandler.update(state);
 	}
 };
