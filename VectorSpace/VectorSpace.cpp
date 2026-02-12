@@ -194,6 +194,11 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         if (key_board_state[SDL_SCANCODE_D]) {
             moveVect = moveVect + Vector2D(pMoveSpeed, 0);
         }
+        if (key_board_state[SDL_SCANCODE_UP]) {
+            // TODO: There should just be a number of these loaded always, that are pulled in and out of the game
+            // that way there are not slowdowns for creating and deleting many objects
+            gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), Vector2D(100, 0), 5, 1));
+        }
 
         gameState->player->deltaSpeed(moveVect);
 
@@ -263,6 +268,14 @@ bool update(GameState* gameState) {
     case StagePlay:
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
+        }
+        for (int i = 0; i < gameState->projectiles.size(); i++) {
+            Projectile* projectile = gameState->projectiles[i];
+            int r = projectile->update(gameState);
+            if (projectile->isCull()) {
+                gameState->projectiles.erase(gameState->projectiles.begin() + i);
+                delete(projectile);
+            }
         }
         for (auto entityUncast : gameState->entities) {
             switch (entityUncast->getType())
@@ -346,39 +359,51 @@ void renderGame(GameState* gameState) {
 
     // Draw entities objects
     for (auto entity : gameState->entities) {
-        switch (entity->getFaction())
-        {
-        case 'e':
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0x0, 0x0, 0xFF);
-            break;
-        default:
-            break;
-        }
+        double dist = (entity->getLocation() - gameState->player->getLocation()).magnitude();
+        if (dist < WINLENGTH) {
 
-        NavigationObject* navObj = entity->getNav();
-        drawTriangle(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-        if (gameState->debugMode) {
-            SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
-                navObj->getD().x - pxoffset, navObj->getD().y - pyoffset);
-            SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
-                navObj->getCD().x - pxoffset, navObj->getCD().y - pyoffset);
-            if (navObj->closestBody != nullptr) {
-                Vector2D dVect = navObj->closestBody->location - navObj->getLocation();
-                Vector2D lineVect = navObj->getD() - navObj->getLocation();
-                Vector2D lineVecrProj;
-                lineVecrProj = dVect.proj(lineVect);
-                SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0, 0);
-                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
-                    navObj->getLocation().x + dVect.x - pxoffset, navObj->getLocation().y + dVect.y - pyoffset);
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0xFF, 0);
-                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
-                    navObj->getLocation().x + lineVect.x - pxoffset, navObj->getLocation().y + lineVect.y - pyoffset);
-                SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
-                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
-                    navObj->getLocation().x + lineVecrProj.x - pxoffset, navObj->getLocation().y + lineVecrProj.y - pyoffset);
-                SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+            switch (entity->getFaction())
+            {
+            case 'e':
+                SDL_SetRenderDrawColor(renderer, 0xFF, 0x0, 0x0, 0xFF);
+                break;
+            default:
+                break;
             }
+
+            NavigationObject* navObj = entity->getNav();
+            drawTriangle(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
+            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+            if (gameState->debugMode) {
+                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                    navObj->getD().x - pxoffset, navObj->getD().y - pyoffset);
+                SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                    navObj->getCD().x - pxoffset, navObj->getCD().y - pyoffset);
+                if (navObj->closestBody != nullptr) {
+                    Vector2D dVect = navObj->closestBody->location - navObj->getLocation();
+                    Vector2D lineVect = navObj->getD() - navObj->getLocation();
+                    Vector2D lineVecrProj;
+                    lineVecrProj = dVect.proj(lineVect);
+                    SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0, 0);
+                    SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                        navObj->getLocation().x + dVect.x - pxoffset, navObj->getLocation().y + dVect.y - pyoffset);
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0xFF, 0);
+                    SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                        navObj->getLocation().x + lineVect.x - pxoffset, navObj->getLocation().y + lineVect.y - pyoffset);
+                    SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
+                    SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
+                        navObj->getLocation().x + lineVecrProj.x - pxoffset, navObj->getLocation().y + lineVecrProj.y - pyoffset);
+                    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+                }
+            }
+        }
+    }
+
+    // draw projectiles
+    for (auto projectile : gameState->projectiles) {
+        double dist = (projectile->getLocation() - gameState->player->getLocation()).magnitude();
+        if (dist < WINLENGTH) { // check if the projectile can be seen by the player
+            drawCircle(renderer, projectile->getLocation().x - pxoffset, projectile->getLocation().y - pyoffset, 5);
         }
     }
 

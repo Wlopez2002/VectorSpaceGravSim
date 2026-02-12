@@ -231,9 +231,13 @@ void resetGameState(GameState* state) {
 	for (auto city : state->cities) {
 		delete(city);
 	}
+	for (auto projectile : state->projectiles) {
+		delete(projectile);
+	}
 	state->dynamicGravBodies.clear();
 	state->staticGravBodies.clear();
 	state->entities.clear();
 	state->cities.clear();
+	state->projectiles.clear();
 	generatePlaySpace(1000, 500, state->seed, state);
 }

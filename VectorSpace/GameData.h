@@ -19,6 +19,7 @@ class PlayerShip;
 class Entity;
 class EntityCargo;
 class EntityPirate;
+class Projectile;
 
 static const double GCONST = 2000.0; // Gravity constant
 static const double AREASIZE = 8000; // the size of an area
@@ -54,6 +55,7 @@ struct GameState {
 	std::vector<DynamicGravBody*> dynamicGravBodies;
 	std::vector<Entity*> entities;
 	std::vector<City*> cities;
+	std::vector<Projectile*> projectiles;
 };
 
 // The base parent class for physical bodies, represents planets, suns, etc.
@@ -631,13 +633,16 @@ public:
 	Entity() {
 		entityType = 'b';
 	}
+	Entity(char type) {
+		entityType = type;
+	}
 	char getFaction() { return faction; }
 	char getType() { return entityType; }
 	int damage(int dam, GameState* state) {
 		health -= dam;
 
 		if (health <= 0) {
-			resetGameState(state);
+			std::cout << "killed\n";
 		}
 		return health;
 	}
@@ -753,5 +758,71 @@ public:
 			break;
 		}
 		navHandler.update(state);
+	}
+};
+
+class Projectile {
+protected:
+	Vector2D location;
+	Vector2D direction;
+	float hitRange;
+	float grace = 0.0;
+	float timeLimit = 10.0;
+	bool cullMe = false;
+public:
+	Projectile(Vector2D location, Vector2D direction, float hitRange, float grace) {
+		this->location = location; this->direction = direction; this->hitRange = hitRange;
+		this->grace = grace;
+	}
+	bool isCull() { return cullMe; }
+	Vector2D getLocation() { return location; }
+	// 0 = nothing, 1 = hit, 2 = is in cull distance
+	int update(GameState* state) {
+		location = location + (direction * state->deltaT);
+		timeLimit -= state->deltaT;
+
+		if (grace) { // if the projectile is in grace it cannot hit the player or an entity
+			grace -= state->deltaT;
+			std::cout << grace << "\n";
+			if (grace < 0) {
+				grace = 0;
+			}
+		}
+		else {
+			if ((state->player->getLocation() - location).magnitude() <= hitRange) {
+				hitPlayer(state);
+			}
+			for (auto entity : state->entities) {
+				if ((location - entity->getLocation()).magnitude() <= hitRange) {
+					hitEntity(state, entity);
+				}
+			}
+		}
+		for (auto body : state->staticGravBodies) {
+			if ((body->location - location).magnitude() - body->radius <= hitRange) {
+				hitBody(state);
+			}
+		}
+		for (auto body : state->dynamicGravBodies) {
+			if ((body->location - location).magnitude() - body->radius <= hitRange) {
+				hitBody(state);
+			}
+		}
+
+
+		if (timeLimit < 0) {
+			cullMe = true;
+			return 2;
+		}	
+	}
+
+	void hitBody(GameState* state) {
+		cullMe = true;
+	}
+	void hitEntity(GameState* state, Entity* entity) {
+		cullMe = true;
+	}
+	void hitPlayer(GameState* state) {
+		cullMe = true;
 	}
 };
