@@ -241,3 +241,27 @@ void resetGameState(GameState* state) {
 	state->projectiles.clear();
 	generatePlaySpace(1000, 500, state->seed, state);
 }
+
+
+// Class Definitions
+
+//Playership
+bool PlayerShip::lockonClosest(GameState* state, float maxRange) {
+	float dist = -1;
+	Entity* entToLock = nullptr;
+	for (Entity* entity : state->entities) {
+		float curDist = (getLocation() - entity->getLocation()).magnitude();
+		if (curDist > maxRange and maxRange != 0) {
+			continue;
+		}
+		if ((curDist < dist) or (dist == -1)) {
+			entToLock = entity;
+		}
+	}
+	if (entToLock == nullptr) {
+		entityLockedOn = nullptr;
+		return false;
+	}
+	entityLockedOn = entToLock;
+	return true;
+}

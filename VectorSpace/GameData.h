@@ -456,6 +456,7 @@ private:
 	Body* parkedOn = nullptr;
 	Vector2D parkedDifference;
 	Body* lastCollided = nullptr;
+	Entity* entityLockedOn = nullptr;
 public:
 	int damage(int dam, GameState* state) {
 		health -= dam;
@@ -484,6 +485,10 @@ public:
 		speed = Vector2D(0, 0);
 		thrust = 1000.0;
 	}
+	Entity* getLockedOn() {
+		return entityLockedOn;
+	}
+	bool lockonClosest(GameState* state, float maxRange);
 	void incrementThrust(double incr) {
 		thrust += incr;
 		if (thrust > 4000) {
@@ -783,7 +788,6 @@ public:
 
 		if (grace) { // if the projectile is in grace it cannot hit the player or an entity
 			grace -= state->deltaT;
-			std::cout << grace << "\n";
 			if (grace < 0) {
 				grace = 0;
 			}

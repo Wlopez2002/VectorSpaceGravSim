@@ -197,7 +197,17 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         if (key_board_state[SDL_SCANCODE_UP]) {
             // TODO: There should just be a number of these loaded always, that are pulled in and out of the game
             // that way there are not slowdowns for creating and deleting many objects
-            gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), Vector2D(100, 0), 5, 1));
+            if (gameState->player->getLockedOn() != nullptr) {
+                std::cout << "dwd";
+                Vector2D dir = (gameState->player->getLockedOn()->getLocation() - gameState->player->getLocation()).normalize();
+                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), dir * 300, 5, 1));
+            }
+            else {
+                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), Vector2D(300, 0), 5, 1));
+            }
+        }
+        if (key_board_state[SDL_SCANCODE_DOWN]) {
+            std::cout << gameState->player->lockonClosest(gameState, 400) << "\n";
         }
 
         gameState->player->deltaSpeed(moveVect);
@@ -356,6 +366,11 @@ void renderGame(GameState* gameState) {
 
     // Draw Player
     drawTriangle(renderer, WINLENGTH/2, WINHEIGHT/2, 12);
+    // Draw around locked on
+    if (gameState->player->getLockedOn() != nullptr) {
+        Entity* lockedOn = gameState->player->getLockedOn();
+        drawSquare(renderer, lockedOn->getLocation().x - pxoffset, lockedOn->getLocation().y - pyoffset, 10);
+    }
 
     // Draw entities objects
     for (auto entity : gameState->entities) {
@@ -372,7 +387,7 @@ void renderGame(GameState* gameState) {
             }
 
             NavigationObject* navObj = entity->getNav();
-            drawTriangle(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 10);
+            drawTriangle(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset, 12);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
             if (gameState->debugMode) {
                 SDL_RenderLine(renderer, navObj->getLocation().x - pxoffset, navObj->getLocation().y - pyoffset,
