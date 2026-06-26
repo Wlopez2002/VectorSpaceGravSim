@@ -89,7 +89,6 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result)
     
 }
 
-
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 {
     GameState* gameState = static_cast<GameState*> (appstate);
@@ -102,8 +101,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         SDL_SetRenderScale(renderer, WINSCALE, WINSCALE);
     }
 
-    Vector2D moveVect(0, 0);
-    double pMoveSpeed = gameState->player->getThrust();
+
     switch (gameState->curState)
     {
     case StageStart:
@@ -182,35 +180,24 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         else {
             gameState->player->setThrustDir(0);
         }
-        if (key_board_state[SDL_SCANCODE_W]) {
-            moveVect = moveVect + Vector2D(0, -pMoveSpeed);
+        if (key_board_state[SDL_SCANCODE_DOWN]) {
+            gameState->player->lockonClosest(gameState, 400);
         }
-        if (key_board_state[SDL_SCANCODE_S]) {
-            moveVect = moveVect + Vector2D(0, pMoveSpeed);
-        }
-        if (key_board_state[SDL_SCANCODE_A]) {
-            moveVect = moveVect + Vector2D(-pMoveSpeed, 0);
-        }
-        if (key_board_state[SDL_SCANCODE_D]) {
-            moveVect = moveVect + Vector2D(pMoveSpeed, 0);
-        }
+
         if (key_board_state[SDL_SCANCODE_UP]) {
             // TODO: There should just be a number of these loaded always, that are pulled in and out of the game
             // that way there are not slowdowns for creating and deleting many objects
+            Vector2D playerSpeed = gameState->player->getSpeed();
             if (gameState->player->getLockedOn() != nullptr) {
-                std::cout << "dwd";
-                Vector2D dir = (gameState->player->getLockedOn()->getLocation() - gameState->player->getLocation()).normalize();
-                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), dir * 300, 5, 1));
+                float playerLockOnLead = gameState->player->getLockOnLead();
+                Vector2D locSpeed = gameState->player->getLockedOn()->getLocation() + ((gameState->player->getLockedOn()->getNav()->getSpeed() * gameState->deltaT) * playerLockOnLead);
+                Vector2D dir = (locSpeed - gameState->player->getLocation()).normalize();
+                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + dir * 1000, 16, 0.1));
             }
             else {
-                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), Vector2D(300, 0), 5, 1));
+                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + Vector2D(1000, 0), 16, 0.1));
             }
         }
-        if (key_board_state[SDL_SCANCODE_DOWN]) {
-            std::cout << gameState->player->lockonClosest(gameState, 400) << "\n";
-        }
-
-        gameState->player->deltaSpeed(moveVect);
 
         if (event->type == SDL_EVENT_KEY_DOWN) {
             switch (event->key.key)
@@ -238,6 +225,39 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     }
 
     return SDL_APP_CONTINUE;
+}
+
+/*
+* For input that should not use an event, 
+* this will run with every update while in play
+*/
+void handleInput(void* appstate) {
+    GameState* gameState = static_cast<GameState*> (appstate);
+
+    Vector2D moveVect(0, 0);
+    double pMoveSpeed = gameState->player->getThrust();
+
+    if (key_board_state[SDL_SCANCODE_LEFT]) {
+        gameState->player->incrementLockLead(-gameState->deltaT * 100);
+    }
+    else if (key_board_state[SDL_SCANCODE_RIGHT]) {
+        gameState->player->incrementLockLead(gameState->deltaT * 100);
+    }
+
+    if (key_board_state[SDL_SCANCODE_W]) {
+        moveVect = moveVect + Vector2D(0, -pMoveSpeed);
+    }
+    if (key_board_state[SDL_SCANCODE_S]) {
+        moveVect = moveVect + Vector2D(0, pMoveSpeed);
+    }
+    if (key_board_state[SDL_SCANCODE_A]) {
+        moveVect = moveVect + Vector2D(-pMoveSpeed, 0);
+    }
+    if (key_board_state[SDL_SCANCODE_D]) {
+        moveVect = moveVect + Vector2D(pMoveSpeed, 0);
+    }
+
+    gameState->player->deltaSpeed(moveVect);
 }
 
 
@@ -276,6 +296,10 @@ bool update(GameState* gameState) {
     case StageStart:
         break;
     case StagePlay:
+        //TODO: check for movement here with keyboard state SDL_GetKeyboardState as events have a lag to them
+        handleInput(gameState);
+
+
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
         }
@@ -369,7 +393,10 @@ void renderGame(GameState* gameState) {
     // Draw around locked on
     if (gameState->player->getLockedOn() != nullptr) {
         Entity* lockedOn = gameState->player->getLockedOn();
+        float playerLockOnLead = gameState->player->getLockOnLead();
+        Vector2D locSpeed = gameState->player->getLockedOn()->getLocation() + ((gameState->player->getLockedOn()->getNav()->getSpeed() * gameState->deltaT) * playerLockOnLead);
         drawSquare(renderer, lockedOn->getLocation().x - pxoffset, lockedOn->getLocation().y - pyoffset, 10);
+        drawSquare(renderer, locSpeed.x - pxoffset, locSpeed.y - pyoffset, 10);
     }
 
     // Draw entities objects
@@ -463,6 +490,7 @@ void renderGame(GameState* gameState) {
         renderText("WinHeight " + std::to_string(WINHEIGHT), 10, 130, 12, 12);
         renderText("WinLength " + std::to_string(WINLENGTH), 10, 150, 12, 12);
         renderText("Entity Count " + std::to_string(gameState->entities.size()), 10, 170, 12, 12);
+        renderText("Lockon Lead " + std::to_string(gameState->player->getLockOnLead()), 10, 190, 12, 12);
         renderText("Dt " + std::to_string(gameState->deltaT), 10, 750, 12, 12);
         if (gameState->player->isParked()) {
             renderText("parked = true", 600, 5, 12, 12);

@@ -247,6 +247,7 @@ protected:
 	double impulseSpeed;
 public:
 	Body* closestBody = nullptr;
+	Vector2D getSpeed() { return speed; }
 	Vector2D getLocation() { return location; }
 	Vector2D getD() { return destination; }
 	Vector2D getCD() { return currentDest; }
@@ -457,6 +458,7 @@ private:
 	Vector2D parkedDifference;
 	Body* lastCollided = nullptr;
 	Entity* entityLockedOn = nullptr;
+	float lockOnLead = 100.0;
 public:
 	int damage(int dam, GameState* state) {
 		health -= dam;
@@ -467,6 +469,7 @@ public:
 		return health;
 	}
 	int getHealth() { return health; }
+	float getLockOnLead() { return lockOnLead; }
 	Vector2D getSpeed() { return speed; }
 	Vector2D getLocation() { return location; }
 	Vector2D getGravDelta() { return gravDelta; }
@@ -487,6 +490,15 @@ public:
 	}
 	Entity* getLockedOn() {
 		return entityLockedOn;
+	}
+	void incrementLockLead(float val) { 
+		lockOnLead += val;
+		if (lockOnLead > 300) {
+			lockOnLead = 300;
+		}
+		if (lockOnLead < 0) {
+			lockOnLead = 0;
+		}
 	}
 	bool lockonClosest(GameState* state, float maxRange);
 	void incrementThrust(double incr) {
@@ -799,17 +811,20 @@ public:
 			for (auto entity : state->entities) {
 				if ((location - entity->getLocation()).magnitude() <= hitRange) {
 					hitEntity(state, entity);
+					std::cout << "hit e\n";
 				}
 			}
 		}
 		for (auto body : state->staticGravBodies) {
 			if ((body->location - location).magnitude() - body->radius <= hitRange) {
 				hitBody(state);
+				std::cout << "hit b\n";
 			}
 		}
 		for (auto body : state->dynamicGravBodies) {
 			if ((body->location - location).magnitude() - body->radius <= hitRange) {
 				hitBody(state);
+				std::cout << "hit b\n";
 			}
 		}
 
