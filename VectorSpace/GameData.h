@@ -501,6 +501,7 @@ public:
 		}
 	}
 	bool lockonClosest(GameState* state, float maxRange);
+	void unlockLockon() { entityLockedOn = nullptr; }
 	void incrementThrust(double incr) {
 		thrust += incr;
 		if (thrust > 4000) {
@@ -521,7 +522,7 @@ public:
 
 	}
 	void update(GameState* state) {
-
+		// Player movement
 		incrementThrust(thrustDir * 500 * state->deltaT);
 
 		if (moving) {
@@ -645,6 +646,7 @@ protected:
 	char faction = 'n'; // no faction
 	char entityType;
 	int health = 10;
+	bool cleanMe = false;
 	NavigationObject navHandler;
 public:
 	Entity() {
@@ -654,11 +656,13 @@ public:
 		entityType = type;
 	}
 	char getFaction() { return faction; }
+	bool isToClean() { return cleanMe; }
 	char getType() { return entityType; }
 	int damage(int dam, GameState* state) {
 		health -= dam;
 
 		if (health <= 0) {
+			cleanMe = true;
 			std::cout << "killed\n";
 		}
 		return health;
@@ -840,6 +844,7 @@ public:
 	}
 	void hitEntity(GameState* state, Entity* entity) {
 		cullMe = true;
+		entity->damage(10, state);
 	}
 	void hitPlayer(GameState* state) {
 		cullMe = true;

@@ -225,8 +225,8 @@ void resetGameState(GameState* state) {
 	for (auto body : state->dynamicGravBodies) {
 		delete(body);
 	}
-	for (auto navObj : state->entities) {
-		delete(navObj);
+	for (auto entity : state->entities) {
+		delete(entity);
 	}
 	for (auto city : state->cities) {
 		delete(city);

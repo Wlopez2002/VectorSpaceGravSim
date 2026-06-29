@@ -20,6 +20,7 @@ static int WINHEIGHT = 800;
 const bool* key_board_state = SDL_GetKeyboardState(NULL);
 
 bool update(GameState* gameState);
+void cleaner(GameState* gameState);
 void renderMenu(GameState* gameState);
 void renderGame(GameState* gameState);
 void renderText(std::string text, int x, int y, int kerning, int FontSize);
@@ -296,7 +297,6 @@ bool update(GameState* gameState) {
     case StageStart:
         break;
     case StagePlay:
-        //TODO: check for movement here with keyboard state SDL_GetKeyboardState as events have a lag to them
         handleInput(gameState);
 
 
@@ -337,13 +337,34 @@ bool update(GameState* gameState) {
             city->update(gameState);
         }
         gameState->player->update(gameState);
+        cleaner(gameState);
         break;
     default:
         break;
     }
 
-
     return true;
+}
+
+/* Cleans up the gamestate after each frame.
+*  This could be deferred 
+*/
+void cleaner(GameState* gameState) {
+    // TODO: This shit needs to be looked at for memory leaks
+    // Cleans dead entities
+    int iter = 0;
+    for (Entity* entity : gameState->entities) {
+        if (entity->isToClean()) {
+            // check if this entity is targeted by the player
+            if (entity == gameState->player->getLockedOn()) {
+                gameState->player->unlockLockon();
+            }
+
+            gameState->entities.erase(gameState->entities.begin() + iter);
+            delete(entity);
+        }
+        iter++;
+    }
 }
 
 
