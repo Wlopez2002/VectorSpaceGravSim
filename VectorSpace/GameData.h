@@ -45,6 +45,7 @@ enum Stage {StageStart, StagePlay};
 // This structure contains all data needed to run the game
 struct GameState {
 	Stage curState;
+	bool resetFlag;
 	int menuSelectorY;
 	int seed;
 	bool debugMode;
@@ -458,13 +459,13 @@ private:
 	Vector2D parkedDifference;
 	Body* lastCollided = nullptr;
 	Entity* entityLockedOn = nullptr;
-	float lockOnLead = 100.0;
+	float lockOnLead = 30.0;
 public:
 	int damage(int dam, GameState* state) {
 		health -= dam;
 
 		if (health <= 0) {
-			resetGameState(state);
+			state->resetFlag = true;
 		}
 		return health;
 	}
@@ -797,8 +798,11 @@ public:
 	}
 	bool isCull() { return cullMe; }
 	Vector2D getLocation() { return location; }
-	// 0 = nothing, 1 = hit, 2 = is in cull distance
+	// 0 = nothing, 1 = hit, 2 = is to be culled
 	int update(GameState* state) {
+		if (cullMe) {
+			return 2;
+		}
 		location = location + (direction * state->deltaT);
 		timeLimit -= state->deltaT;
 
@@ -811,24 +815,25 @@ public:
 		else {
 			if ((state->player->getLocation() - location).magnitude() <= hitRange) {
 				hitPlayer(state);
+				return 1;
 			}
 			for (auto entity : state->entities) {
 				if ((location - entity->getLocation()).magnitude() <= hitRange) {
 					hitEntity(state, entity);
-					std::cout << "hit e\n";
+					return 1;
 				}
 			}
 		}
 		for (auto body : state->staticGravBodies) {
 			if ((body->location - location).magnitude() - body->radius <= hitRange) {
 				hitBody(state);
-				std::cout << "hit b\n";
+				return 1;
 			}
 		}
 		for (auto body : state->dynamicGravBodies) {
 			if ((body->location - location).magnitude() - body->radius <= hitRange) {
 				hitBody(state);
-				std::cout << "hit b\n";
+				return 1;
 			}
 		}
 
@@ -836,7 +841,8 @@ public:
 		if (timeLimit < 0) {
 			cullMe = true;
 			return 2;
-		}	
+		}
+		return 0;
 	}
 
 	void hitBody(GameState* state) {
@@ -844,9 +850,11 @@ public:
 	}
 	void hitEntity(GameState* state, Entity* entity) {
 		cullMe = true;
-		entity->damage(10, state);
+		entity->damage(5, state);
 	}
 	void hitPlayer(GameState* state) {
+		// unknown crash sometimes I think it is fixed by moving reset out of playership
 		cullMe = true;
+		state->player->damage(5, state);
 	}
 };

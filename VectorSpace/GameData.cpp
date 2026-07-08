@@ -216,30 +216,48 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 // Resets the given gamestate and loads new bodies.
 // This does not
 void resetGameState(GameState* state) {
+	std::cout << "reached reset\n";
 	state->curState = StageStart;
 	state->deltaT = 0;
 	state->player->resetPlayer();
 	for (auto body : state->staticGravBodies) {
-		delete(body);
+		delete body;
+		body = nullptr;
 	}
 	for (auto body : state->dynamicGravBodies) {
-		delete(body);
+		delete body;
+		body = nullptr;
 	}
 	for (auto entity : state->entities) {
-		delete(entity);
+		delete entity;
+		entity = nullptr;
 	}
 	for (auto city : state->cities) {
-		delete(city);
+		delete city;
+		city = nullptr;
 	}
 	for (auto projectile : state->projectiles) {
-		delete(projectile);
+		delete projectile;
+		projectile = nullptr;
 	}
 	state->dynamicGravBodies.clear();
+	state->dynamicGravBodies.shrink_to_fit();
 	state->staticGravBodies.clear();
+	state->staticGravBodies.shrink_to_fit();
 	state->entities.clear();
+	state->entities.shrink_to_fit();
 	state->cities.clear();
+	state->cities.shrink_to_fit();
 	state->projectiles.clear();
-	generatePlaySpace(1000, 500, state->seed, state);
+	state->projectiles.shrink_to_fit();
+	state->resetFlag = false;
+
+	std::cout << "state reset\n";
+	std::cout << state->dynamicGravBodies.size() << " dbodies\n";
+	std::cout << state->staticGravBodies.size() << " sbodies\n";
+	std::cout << state->entities.size() << " entities\n";
+	std::cout << state->cities.size() << " cities\n";
+	std::cout << state->projectiles.size() << " projectiles\n";
 }
 
 
