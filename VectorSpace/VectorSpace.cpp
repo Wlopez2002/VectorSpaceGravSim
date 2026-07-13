@@ -83,6 +83,7 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result)
     gameState->dynamicGravBodies.clear();
     gameState->entities.clear();
     gameState->cities.clear();
+    gameState->eventStack.clear();
     delete gameState->player;
     delete gameState;
 
@@ -224,22 +225,6 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 void handleInput(void* appstate) {
     GameState* gameState = static_cast<GameState*> (appstate);
 
-    if (key_board_state[SDL_SCANCODE_UP]) {
-        // TODO: There should just be a number of these loaded always, that are pulled in and out of the game
-        // that way there are not slowdowns for creating and deleting many objects
-        Vector2D playerSpeed = gameState->player->getSpeed();
-        if (gameState->player->getLockedOn() != nullptr) {
-            float playerLockOnLead = gameState->player->getLockOnLead();
-            Vector2D locSpeed = gameState->player->getLockedOn()->getLocation() + ((gameState->player->getLockedOn()->getNav()->getSpeed() * gameState->deltaT) * playerLockOnLead);
-            Vector2D dir = (locSpeed - gameState->player->getLocation()).normalize();
-            gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + dir * 1000, 16, 0.1));
-        }
-        else {
-            gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + Vector2D(1000, 0), 16, 0.1));
-        }
-    }
-
-
     // movement
     Vector2D moveVect(0, 0);
     double pMoveSpeed = gameState->player->getThrust();
@@ -265,6 +250,29 @@ void handleInput(void* appstate) {
     }
 
     gameState->player->deltaSpeed(moveVect);
+
+
+    // shooting
+    if (key_board_state[SDL_SCANCODE_UP]) {
+        // TODO: There should just be a number of these loaded always, that are pulled in and out of the game
+        // that way there are not slowdowns for creating and deleting many objects
+        Vector2D playerSpeed = gameState->player->getSpeed();
+        if (gameState->player->getLockedOn() != nullptr) {
+            float playerLockOnLead = gameState->player->getLockOnLead();
+            Vector2D locSpeed = gameState->player->getLockedOn()->getLocation() + ((gameState->player->getLockedOn()->getNav()->getSpeed() * gameState->deltaT) * playerLockOnLead);
+            Vector2D dir = (locSpeed - gameState->player->getLocation()).normalize();
+            gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + dir * 1000, 16, 0.1));
+        }
+        else {
+            Vector2D playerDir = moveVect.normalize();
+            if (moveVect.magnitude() == 0) {
+                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + Vector2D(1000,0), 16, 0.1));
+            }
+            else {
+                gameState->projectiles.push_back(new Projectile(gameState->player->getLocation(), playerSpeed + playerDir * 1000, 16, 0.1));
+            }
+        }
+    }
 }
 
 
@@ -310,17 +318,12 @@ bool update(GameState* gameState) {
 
         handleInput(gameState);
 
-
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
         }
         for (int i = 0; i < gameState->projectiles.size(); i++) {
             Projectile* projectile = gameState->projectiles[i];
             int r = projectile->update(gameState);
-            //if (projectile->isCull()) {
-            //    gameState->projectiles.erase(gameState->projectiles.begin() + i);
-            //    delete(projectile);
-            //}
         }
         for (auto entityUncast : gameState->entities) {
             switch (entityUncast->getType())
@@ -348,6 +351,15 @@ bool update(GameState* gameState) {
             city->update(gameState);
         }
         gameState->player->update(gameState);
+
+        // events
+        if (!gameState->eventStack.empty()) {
+            std::string currentEvent = gameState->eventStack.back();
+            std::cout << currentEvent << "\n";
+            gameState->eventStack.pop_back();
+        }
+
+        // cleanup
         cleaner(gameState);
         break;
     default:
@@ -368,10 +380,6 @@ void cleaner(GameState* gameState) {
     for (int iter = 0; iter < gameState->entities.size();) {
         Entity* curEntity = gameState->entities[iter];
         if (curEntity->isToClean()) {
-            //std::curEntity << curProjectile << " " << iter << " \n";
- 
-            // check if the entity is being locked on by the player
-            // as playership would keep a pointer to that address
             if (gameState->player->getLockedOn() == curEntity) {
                 gameState->player->unlockLockon();
             }
@@ -387,22 +395,10 @@ void cleaner(GameState* gameState) {
             iter++;
         }
     }
-    //gameState->entities.shrink_to_fit();
-
-    //iter = 0;
-    //std::cout << "start\n";
-    //for (int iter = 0; iter < gameState->projectiles.size(); iter++) {
-    //    std::cout << gameState->projectiles[iter] << " " << iter << " \n";
-    //}
-
-    //std::cout << gameState->projectiles.size() << "\n";
-    //std::cout << "erasing\n";
-    //for (Projectile* projectile : gameState->projectiles) {
+    // cleans projectiles
     for (int iter = 0; iter < gameState->projectiles.size();) {
         Projectile* curProjectile = gameState->projectiles[iter];
         if (curProjectile->isCull()) {
-            //std::cout << curProjectile << " " << iter << " \n";
-
             gameState->projectiles.erase(gameState->projectiles.begin() + iter);
 
             delete curProjectile;
@@ -412,12 +408,7 @@ void cleaner(GameState* gameState) {
             iter++;
         }
     }
-
-    //std::cout << "remaining\n";
-    //for (int iter = 0; iter < gameState->projectiles.size(); iter++) {
-    //    std::cout << gameState->projectiles[iter] << " " << iter << " \n";
-    //}
-    //std::cout << "end\n\n";
+    gameState->projectiles.shrink_to_fit();
 }
 
 void renderMenu(GameState* gameState) {
@@ -470,8 +461,6 @@ void renderGame(GameState* gameState) {
         Vector2D locSpeed = gameState->player->getLockedOn()->getLocation() + ((gameState->player->getLockedOn()->getNav()->getSpeed() * gameState->deltaT) * playerLockOnLead);
         drawSquare(renderer, lockedOn->getLocation().x - pxoffset, lockedOn->getLocation().y - pyoffset, 10);
         drawSquare(renderer, locSpeed.x - pxoffset, locSpeed.y - pyoffset, 10);
-        
-        std::cout << lockedOn << "\n";
     }
 
     // Draw entities objects

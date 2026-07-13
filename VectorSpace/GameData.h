@@ -57,6 +57,9 @@ struct GameState {
 	std::vector<Entity*> entities;
 	std::vector<City*> cities;
 	std::vector<Projectile*> projectiles;
+	// events should never be used for important pieces of game control (exiting, saving, ect)
+	// only for things that could be thrown away when the stack clears.
+	std::vector<std::string> eventStack;
 };
 
 // The base parent class for physical bodies, represents planets, suns, etc.
@@ -523,6 +526,8 @@ public:
 
 	}
 	void update(GameState* state) {
+		// 
+
 		// Player movement
 		incrementThrust(thrustDir * 500 * state->deltaT);
 
@@ -664,7 +669,7 @@ public:
 
 		if (health <= 0) {
 			cleanMe = true;
-			std::cout << "killed\n";
+			state->eventStack.push_back("Event: entity killed\n");
 		}
 		return health;
 	}
@@ -824,14 +829,16 @@ public:
 				}
 			}
 		}
+
+		// bodies can have a lower hit range
 		for (auto body : state->staticGravBodies) {
-			if ((body->location - location).magnitude() - body->radius <= hitRange) {
+			if ((body->location - location).magnitude() - body->radius <= 0) {
 				hitBody(state);
 				return 1;
 			}
 		}
 		for (auto body : state->dynamicGravBodies) {
-			if ((body->location - location).magnitude() - body->radius <= hitRange) {
+			if ((body->location - location).magnitude() - body->radius <= 0) {
 				hitBody(state);
 				return 1;
 			}

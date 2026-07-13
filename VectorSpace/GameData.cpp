@@ -250,6 +250,8 @@ void resetGameState(GameState* state) {
 	state->cities.shrink_to_fit();
 	state->projectiles.clear();
 	state->projectiles.shrink_to_fit();
+	state->eventStack.clear();
+	state->eventStack.shrink_to_fit();
 	state->resetFlag = false;
 
 	std::cout << "state reset\n";
