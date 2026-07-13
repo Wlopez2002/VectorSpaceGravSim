@@ -46,6 +46,7 @@ enum Stage {StageStart, StagePlay};
 struct GameState {
 	Stage curState;
 	bool resetFlag;
+	bool gamePause;
 	int menuSelectorY;
 	int seed;
 	bool debugMode;
@@ -665,11 +666,16 @@ public:
 	bool isToClean() { return cleanMe; }
 	char getType() { return entityType; }
 	int damage(int dam, GameState* state) {
+		if (cleanMe) {
+			return 0;
+		}
 		health -= dam;
 
 		if (health <= 0) {
 			cleanMe = true;
-			state->eventStack.push_back("Event: entity killed\n");
+
+			std::string address = std::to_string((std::uintptr_t)this);
+			state->eventStack.push_back("Event: entity " + address + " killed");
 		}
 		return health;
 	}
@@ -678,6 +684,10 @@ public:
 	int getHealth() { return health; }
 	void setHealth(int h) { health = h; }
 	void update(GameState* state) {
+		if (cleanMe) {
+			return;
+		}
+
 		navHandler.update(state);
 	}
 };
@@ -693,8 +703,10 @@ public:
 	EntityCargo() {
 		entityType = 'c';
 	}
-
 	void update(GameState* state) {
+		if (cleanMe) {
+			return;
+		}
 ;		if (destCity == nullptr) {
 			if (cargoCount >= cargoCap) {
 				destCity = getBestConsumer(state);
@@ -768,6 +780,9 @@ public:
 		faction = 'e';
 	}
 	void update(GameState* state) {
+		if (cleanMe) {
+			return;
+		}
 		float dfp = (navHandler.getLocation() - state->player->getLocation()).magnitude();
 		Vector2D pte = (state->player->getLocation() - navHandler.getLocation()).normalize(); // player to entity
 		switch (currentBehavior) {

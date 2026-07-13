@@ -50,6 +50,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 
     GameState* gameState = new GameState;
     gameState->resetFlag = false;
+    gameState->gamePause = false;
     gameState->curState = StageStart;
     gameState->menuSelectorY = 0;
     gameState->seed = ((int)std::time(0)) % 9999999;
@@ -177,6 +178,16 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         }
         break;
     case StagePlay:
+        if (gameState->gamePause) {
+            if (event->type == SDL_EVENT_KEY_DOWN) {
+                if (key_board_state[SDL_SCANCODE_P]) {
+                    gameState->gamePause = false;
+                    std::cout << "unpause\n";
+                }
+            }
+            return SDL_APP_CONTINUE;
+        }
+
         if (key_board_state[SDL_SCANCODE_Q]) {
             gameState->player->setThrustDir(-1); // TODO: this needs to tell a flag in update to increment thrust
         } else if (key_board_state[SDL_SCANCODE_E]) {
@@ -185,8 +196,16 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
         else {
             gameState->player->setThrustDir(0);
         }
+
         if (key_board_state[SDL_SCANCODE_DOWN]) {
             gameState->player->lockonClosest(gameState, 400);
+        }
+        
+        if (event->type == SDL_EVENT_KEY_DOWN) {
+            if (key_board_state[SDL_SCANCODE_P]) {
+                gameState->gamePause = true;
+                std::cout << "pause\n";
+            }
         }
 
         if (event->type == SDL_EVENT_KEY_DOWN) {
@@ -313,6 +332,14 @@ bool update(GameState* gameState) {
     case StagePlay:
         if (gameState->resetFlag) {
             resetGameState(gameState);
+            return true;
+        }
+
+        if (gameState->gamePause) {
+            // TODO: this needs to be more robust
+
+            // cleanup
+            cleaner(gameState);
             return true;
         }
 
