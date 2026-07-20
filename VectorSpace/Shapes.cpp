@@ -82,3 +82,7 @@ void drawTriangle(SDL_Renderer* renderer, float cx, float cy, float r) {
 	points[3].x = cx;		points[3].y = cy + r;
 	SDL_RenderLines(renderer, points, 4);
 }
+
+void drawBox(SDL_Renderer* renderer, float x, float y, float h, float w) {
+	// use SDL_RenderRect
+}

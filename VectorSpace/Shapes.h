@@ -16,3 +16,5 @@ void drawTiltedSquare(SDL_Renderer* renderer, float cx, float cy, float r);
 void drawCity(SDL_Renderer* renderer, float cx, float cy, float r);
 
 void drawTriangle(SDL_Renderer* renderer, float cx, float cy, float r);
+
+void drawBox(SDL_Renderer* renderer, float x, float y, float h, float w);

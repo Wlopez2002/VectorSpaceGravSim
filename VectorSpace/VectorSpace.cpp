@@ -57,6 +57,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     gameState->seedStringBuffer = std::to_string(gameState->seed);
     gameState->debugMode = true;
     gameState->player = new PlayerShip();
+    gameState->entityCap = 0;
 
     gameState->deltaT = 0;
     DTNOW = SDL_GetPerformanceCounter();
@@ -345,6 +346,31 @@ bool update(GameState* gameState) {
 
         handleInput(gameState);
 
+        // if the entity count is less than entity cap we should make some
+        if ((int)gameState->entities.size() < gameState->entityCap) {
+            int pick = rand() % 4;
+            if (pick == 3) {
+                // chose to create pirate
+                Entity* newPirate = (Entity*) new EntityPirate(EntityPirate::AIBehavior::Driveby);
+                int bound = AREASIZE * 2;
+                newPirate->getNav()->forceLocation(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+                newPirate->getNav()->setDestination(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+                gameState->entities.push_back((Entity*)newPirate);
+                std::cout << "Created a new pirate\n";
+            }
+            else {
+                // chose to create neutral entity
+                Entity* newCargo = (Entity*) new EntityCargo();
+                int bound = AREASIZE * 2;
+                newCargo->getNav()->forceLocation(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+                newCargo->getNav()->setDestination(Vector2D((rand() % bound) - AREASIZE, (rand() % bound) - AREASIZE));
+                gameState->entities.push_back((Entity*)newCargo);
+                std::cout << "Created a new entity\n";
+
+            }
+        }
+
+
         for (auto body : gameState->dynamicGravBodies) {
             body->update(gameState);
         }
@@ -466,6 +492,10 @@ void renderMenu(GameState* gameState) {
     }
 
     SDL_RenderPresent(renderer);
+}
+
+void renderEventPopup(){
+    //TODO:
 }
 
 void renderGame(GameState* gameState) {

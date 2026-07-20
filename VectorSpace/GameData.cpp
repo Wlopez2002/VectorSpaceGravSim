@@ -163,6 +163,8 @@ void generatePlaySpace(double systemRad, double systemPad, int seed, GameState* 
 	state->entities.push_back((Entity*)newPirate);
 
 	std::cout << "populated " << (int)state->entities.size() << " entities\n";
+
+	state->entityCap = (int)state->entities.size();
 }
 
 
@@ -284,4 +286,47 @@ bool PlayerShip::lockonClosest(GameState* state, float maxRange) {
 	}
 	entityLockedOn = entToLock;
 	return true;
+}
+
+//EnemyShip
+void EntityPirate::update(GameState* state) {
+	if (cleanMe) {
+		return;
+	}
+
+	// movement
+	float dfp = (navHandler.getLocation() - state->player->getLocation()).magnitude();
+	Vector2D pte = (state->player->getLocation() - navHandler.getLocation()).normalize(); // player to entity
+	switch (currentBehavior) {
+	case Reckless:
+		if (dfp > 100) {
+			navHandler.setDestination(state->player->getLocation() + pte * 100);
+		}
+		break;
+	case Cautious:
+		navHandler.setDestination(state->player->getLocation() - pte * 300);
+		break;
+	case Driveby:
+		Vector2D s = state->player->getLocation() + rotateVector2D(pte * 300, 3.1415 / 2);
+		navHandler.setDestination(s);
+		break;
+	}
+	navHandler.update(state);
+
+	// attacking
+	if ((state->player->getLocation() - navHandler.getLocation()).magnitude() < 500.0) { // if player is close try to attack
+		attackTimer -= state->deltaT;
+		if (attackTimer <= 0) {
+			attackTimer = 0.25;
+			//Vector2D playerDir = (state->player->getLocation() - navHandler.getLocation()).normalize();
+			float lead = state->player->getSpeed().magnitude();
+			Vector2D locSpeed = state->player->getLocation() + ((state->player->getSpeed() * state->deltaT) * lead);
+			Vector2D dir = (locSpeed - getLocation()).normalize();
+			//Vector2D projSpeed = navHandler.getSpeed() + dir * 1000;
+			Vector2D projSpeed = dir * 1000;
+
+			//switch (aimMode)
+			state->projectiles.push_back(new Projectile(navHandler.getLocation(), projSpeed, 16, 0.1));
+		}
+	}
 }

@@ -40,16 +40,17 @@ double randBodyOrbiting(Body* toOrbit, int seed, GameState* state, double distan
 static std::vector<double> taylorDSin = { 1.0, 0, -1.0 / 2, 0, 1.0 / 24, 0, -1.0 / 720, 0, 1.0 / 40320, 0, -1.0 / 3628800 };
 static std::vector<double> tayloyDCos = { 0, -1.0, 0, 1.0 / 6, 0, -1.0 / 120, 0, 1.0 / 5040, 0, -1.0 / 362880 };
 
-enum Stage {StageStart, StagePlay};
+enum Stage {StageStart, StagePlay, StateMenu};
 
 // This structure contains all data needed to run the game
 struct GameState {
 	Stage curState;
 	bool resetFlag;
 	bool gamePause;
+	bool debugMode;
 	int menuSelectorY;
 	int seed;
-	bool debugMode;
+	int entityCap;
 	float deltaT;
 	PlayerShip* player;
 	std::string seedStringBuffer;
@@ -771,6 +772,7 @@ protected:
 	enum AIBehavior;
 	enum AIBAim;
 	AIBehavior currentBehavior;
+	float attackTimer = 0.25;
 public:
 	enum AIBehavior { Reckless, Cautious, Driveby };
 	enum AIBAim { PoorAim, ExactAim, LeadingAim };
@@ -779,28 +781,7 @@ public:
 		entityType = 'p';
 		faction = 'e';
 	}
-	void update(GameState* state) {
-		if (cleanMe) {
-			return;
-		}
-		float dfp = (navHandler.getLocation() - state->player->getLocation()).magnitude();
-		Vector2D pte = (state->player->getLocation() - navHandler.getLocation()).normalize(); // player to entity
-		switch (currentBehavior) {
-		case Reckless:
-			if (dfp > 100) {
-				navHandler.setDestination(state->player->getLocation() + pte * 100);
-			}
-			break;
-		case Cautious:
-			navHandler.setDestination(state->player->getLocation() - pte * 300);
-			break;
-		case Driveby:
-			Vector2D s = state->player->getLocation() + rotateVector2D(pte * 300, 3.1415/2);
-			navHandler.setDestination(s);
-			break;
-		}
-		navHandler.update(state);
-	}
+	void update(GameState* state);
 };
 
 class Projectile {
